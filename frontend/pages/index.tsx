@@ -1,7 +1,8 @@
 import type { NextPage } from "next";
 import Head from "next/head";
 import styles from "../styles/Home.module.css";
-import Topbar from "../components/topbar-components";
+import Topbar from "../components/topbar.components";
+import Requests from "../components/requests.components";
 
 const Home: NextPage = () => {
   return (
@@ -10,8 +11,9 @@ const Home: NextPage = () => {
         <title>Cross-Chain Token Swap</title>
         <link href="/favicon.ico" rel="icon" />
       </Head>
-      <Topbar/>
       
+      <Topbar/>
+      <Requests/>
     </div>
   );
 };
