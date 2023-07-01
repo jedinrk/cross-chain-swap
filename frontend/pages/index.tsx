@@ -3,6 +3,7 @@ import Head from "next/head";
 import styles from "../styles/Home.module.css";
 import Topbar from "../components/topbar.components";
 import Requests from "../components/requests.components";
+import Button from "@mui/material/Button";
 
 const Home: NextPage = () => {
   return (
@@ -11,9 +12,15 @@ const Home: NextPage = () => {
         <title>Cross-Chain Token Swap</title>
         <link href="/favicon.ico" rel="icon" />
       </Head>
-      
-      <Topbar/>
-      <Requests/>
+      <Topbar />
+      <div className={styles.requestHeader}>
+        <Button variant="contained" className={styles.requestButton}>
+          Create Request
+        </Button>
+      </div>
+      <div className={styles.requestList}>
+        <Requests/>
+      </div>
     </div>
   );
 };
