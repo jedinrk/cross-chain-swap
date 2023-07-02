@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 
-const API_BASE_URL: string = 'https://your-backend-server-url.com/api';
+const API_BASE_URL: string = 'http://localhost:5050';
 
 interface SwapRequest {
   hash: string;
