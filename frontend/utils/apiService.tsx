@@ -1,6 +1,6 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse } from "axios";
 
-const API_BASE_URL: string = 'http://localhost:5050';
+const API_BASE_URL: string = "http://localhost:5050";
 
 interface SwapRequest {
   hash: string;
@@ -9,7 +9,24 @@ interface SwapRequest {
   userAddress: string;
 }
 
-export const createSwapRequest = async (hash: string, amount: number, token: string, userAddress: string): Promise<any> => {
+export const generateHash = async (secret: string): Promise<any> => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/generatehash`, {
+      secret
+    });
+    console.log("generateHash: ", response)
+    return response.data.hash;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const createSwapRequest = async (
+  hash: string,
+  amount: number,
+  token: string,
+  userAddress: string
+): Promise<any> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/createSwapRequest`, {
       hash,
@@ -32,7 +49,9 @@ export const getActiveSwapRequests = async (): Promise<any> => {
   }
 };
 
-export const getUsersSwapRequests = async (userAddress: string): Promise<any> => {
+export const getUsersSwapRequests = async (
+  userAddress: string
+): Promise<any> => {
   try {
     const response = await axios.get(`${API_BASE_URL}/getUsersSwapRequests`, {
       params: {

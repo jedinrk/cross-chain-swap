@@ -4,9 +4,12 @@ import styles from "../styles/Home.module.css";
 import Topbar from "../components/topbar.components";
 import Requests from "../components/requests.components";
 import Button from "@mui/material/Button";
-import { createSwapRequest } from "../utils/apiService";
+import { useState } from "react";
+import { createSwapRequest, generateHash } from "../utils/apiService";
 
 const Home: NextPage = () => {
+  const [inputtedSecret, setInputtedSecret] = useState("");
+  const [generatedHash, setGeneratedHash] = useState("");
   const handleCreateSwapRequest = async () => {
     try {
       const response = await createSwapRequest(
@@ -23,6 +26,16 @@ const Home: NextPage = () => {
     }
   };
 
+  const handleGenerateHash = async () => {
+    try {
+      const hash = await generateHash(inputtedSecret);
+      setGeneratedHash(hash);
+      console.log("Generated hash: ", hash);
+    } catch (error) {
+      console.error("Error generating hash", error);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -31,7 +44,25 @@ const Home: NextPage = () => {
       </Head>
       <Topbar />
       <div className={styles.requestHeader}>
-        <Button variant="contained" className={styles.requestButton} onClick={handleCreateSwapRequest}>
+        <div>
+          <span>
+            <input
+              type="text"
+              id="secret"
+              value={inputtedSecret}
+              onChange={(e) => setInputtedSecret(e.target.value)}
+            />
+            <Button variant="contained" onClick={handleGenerateHash}>
+              Generate Hash
+            </Button>
+          </span>
+          <label>{generatedHash}</label>
+        </div>
+        <Button
+          variant="contained"
+          className={styles.requestButton}
+          onClick={handleCreateSwapRequest}
+        >
           Create Request
         </Button>
       </div>
