@@ -10,10 +10,18 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
 import styles from "../styles/Request.module.css";
-import { getUsersSwapRequests } from "../utils/apiService";
-import { useAccount, useNetwork, useSendTransaction, useWaitForTransaction } from "wagmi";
+import { getUsersSwapRequests, revealSecret } from "../utils/apiService";
+import {
+  sepolia,
+  useAccount,
+  useNetwork,
+  useSendTransaction,
+  useWaitForTransaction,
+} from "wagmi";
 import { useEffect, useState } from "react";
 import { parseEther } from "viem";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
 
 interface Column {
   id: "token" | "amount" | "network" | "time" | "status" | "action";
@@ -56,8 +64,10 @@ const columns: readonly Column[] = [
 const MyRequests = () => {
   const { address, isConnected } = useAccount();
   const { chain } = useNetwork();
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [secret, setSecret] = useState("");
+  const [showInput, setShowInput] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [userRequests, setUserRequests] = useState([]);
   const [txDetails, setTxDetails] = useState({
@@ -89,11 +99,34 @@ const MyRequests = () => {
     setPage(0);
   };
 
+  const handleSwapButton = async () => {
+    setShowInput(!showInput);
+  };
+
+  const handleInputSecret = (inputtedValue: string) => {
+    setSecret(inputtedValue);
+  };
+
+  const handleRevealSecret = async () => {
+    try {
+      const txData = await revealSecret(secret, chain ? chain.id : sepolia.id);
+      if (txData) {
+        setTxDetails(txData);
+      }
+    } catch (error) {
+      console.log(`error processing swap token, ${error}`);
+    }
+  };
+
   const renderActionButton = (status: string) => {
     switch (status) {
       case "ready":
         return (
-          <Button variant="contained" className={styles.button}>
+          <Button
+            variant="contained"
+            className={styles.button}
+            onClick={handleSwapButton}
+          >
             Swap
           </Button>
         );
@@ -111,6 +144,23 @@ const MyRequests = () => {
           </Button>
         );
     }
+  };
+
+  const renderRevealSecret = () => {
+    return (
+      <div>
+        <input
+          value={secret}
+          onChange={(e) => {
+            handleInputSecret(e.target.value);
+          }}
+        />
+        <button onClick={handleRevealSecret}>Reveal</button>
+        <IconButton onClick={handleSwapButton}>
+          <CloseIcon />
+        </IconButton>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -178,7 +228,9 @@ const MyRequests = () => {
                         {request.status}
                       </TableCell>
                       <TableCell key="action" align="center">
-                        {renderActionButton(request.status)}
+                        {showInput
+                          ? renderRevealSecret()
+                          : renderActionButton(request.status)}
                       </TableCell>
                     </TableRow>
                   );

@@ -64,7 +64,7 @@ export const createSwapRequest = async (
       amount,
       token,
       lockTime,
-      networkId
+      networkId,
     });
     return response.data;
   } catch (error) {
@@ -100,7 +100,6 @@ export const getUsersSwapRequests = async (
   }
 };
 
-
 export const getUsersSwapEngagments = async (
   userAddress: string
 ): Promise<any> => {
@@ -122,6 +121,7 @@ export const engageSwapRequest = async (
   sendToken: string,
   recieveToken: string,
   lockTime: number,
+  originNetworkId: number,
   networkId: Number
 ): Promise<any> => {
   try {
@@ -131,7 +131,8 @@ export const engageSwapRequest = async (
       sendToken,
       recieveToken,
       lockTime,
-      networkId
+      originNetworkId,
+      networkId,
     });
     return response.data;
   } catch (error) {
@@ -139,3 +140,17 @@ export const engageSwapRequest = async (
   }
 };
 
+export const revealSecret = async (
+  secret: string,
+  networkId: Number
+): Promise<any> => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/revealSecret`, {
+      secret,
+      networkId,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

@@ -7,7 +7,7 @@ const SwapRequest = (
   tokenAddress,
   tokenSymbol,
   amount,
-  network,
+  networkId,
   timeLock,
   hash,
   isCompleted,
@@ -19,7 +19,7 @@ const SwapRequest = (
     tokenAddress,
     tokenSymbol,
     amount,
-    network,
+    networkId,
     timeLock,
     hash,
     isCompleted,
@@ -31,24 +31,23 @@ const SwapIterator = async (htlcContract, web3, swapCount) => {
   const activeSwapMap = new Map();
   for (let i = 0; i < swapCount; i++) {
     const swapByIndex = await htlcContract.methods.getSwapByIndex(i).call(); // Get the swap hash at index i
-    const result = await htlcContract.methods.swaps(swapByIndex[6]).call(); // Get the swap details using the hash
-    const tokenContract = new web3.eth.Contract(erc20Abi, result[3]);
+    const result = await htlcContract.methods.swaps(swapByIndex[7]).call(); // Get the swap details using the hash
+    const tokenContract = new web3.eth.Contract(erc20Abi, result[4]);
     const tokenSymbol = await tokenContract.methods.symbol().call();
-
     const swapRequest = SwapRequest(
       result[0],
       result[1],
-      result[3],
+      result[4],
       tokenSymbol,
-      Web3.utils.fromWei(result[2], "ether"),
-      "Matic -> BSC",
-      result[5],
+      Web3.utils.fromWei(result[3], "ether"),
+      result[2],
       result[6],
-      result[8],
-      result[9]
+      result[7],
+      result[9],
+      result[10]
     );
 
-    activeSwapMap.set(result[6], swapRequest);
+    activeSwapMap.set(result[7], swapRequest);
   }
 
   return activeSwapMap;

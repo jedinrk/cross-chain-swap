@@ -21,14 +21,14 @@ const { chains, publicClient, webSocketPublicClient } = configureChains(
     polygonMumbai,
     bsc,
     bscTestnet,
-    ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'true' ? [goerli] : []),
+    ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'true' ? [sepolia] : []),
   ],
   [publicProvider()]
 );
 
 const { connectors } = getDefaultWallets({
-  appName: 'RainbowKit App',
-  projectId: 'YOUR_PROJECT_ID',
+  appName: 'htlc',
+  projectId: '8ee904c3d54715fc2b77dd5c22d48cff',
   chains,
 });
 

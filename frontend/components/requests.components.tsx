@@ -111,7 +111,8 @@ export default function Requests(props: any) {
         swap.tokenAddress,
         "0xb852CdA1A01ed1eDE79Fe4885713055E1523fFf0",
         swap.timeLock,
-        chain ? chain.id : sepolia.id
+        swap.networkId,
+        chain ? chain.id : sepolia.id,
       );
 
       // Handle success or update state

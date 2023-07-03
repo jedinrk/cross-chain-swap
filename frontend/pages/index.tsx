@@ -7,7 +7,6 @@ import Button from "@mui/material/Button";
 import { useState } from "react";
 import { createSwapRequest, generateHash } from "../utils/apiService";
 import RequestDialog from "../components/request-dialog.component";
-import EngageDialog from "../components/engage.component"
 import Dialog from "@mui/material/Dialog";
 
 const Home: NextPage = () => {

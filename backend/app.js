@@ -115,6 +115,7 @@ app.post("/createSwapRequest", async (req, res) => {
 
   const tx = await htlcContract.methods.lockTokens(
     hash,
+    networkId,
     amount,
     token,
     lockTime
@@ -158,7 +159,7 @@ app.get("/getUsersSwapRequests", async (req, res) => {
 
   const consolidatedArray = await consolidateSwapIntoArray();
 
-  console.log("consolidatedArray ", consolidatedArray)
+  console.log("consolidatedArray ", consolidatedArray);
   const userSwapRequests = consolidatedArray.filter(
     (swap) => swap.sender === userAddress
   );
@@ -197,8 +198,15 @@ app.get("/getUsersSwapEngagments", async (req, res) => {
  */
 app.post("/engageSwapRequest", async (req, res) => {
   console.log("engageSwapRequest", req.body);
-  const { hash, amount, sendToken, recieveToken, lockTime, networkId } =
-    req.body;
+  const {
+    hash,
+    amount,
+    sendToken,
+    recieveToken,
+    lockTime,
+    originNetworkId,
+    networkId,
+  } = req.body;
 
   let htlcContract;
   let htlcContractAddr;
@@ -212,10 +220,40 @@ app.post("/engageSwapRequest", async (req, res) => {
 
   const tx = await htlcContract.methods.lockTokens(
     hash,
+    originNetworkId,
     amount,
     recieveToken,
     lockTime
   );
+  const encodedABI = await tx.encodeABI();
+
+  if (encodedABI) {
+    return res.status(200).json({
+      to: htlcContractAddr,
+      data: encodedABI,
+    });
+  } else {
+    return res.status(400).json({ error: "encodeABI error" });
+  }
+});
+
+/**
+ *
+ */
+app.post("/revealSecret", async (req, res) => {
+  const { secret, networkId } = req.body;
+
+  let htlcContract;
+  let htlcContractAddr;
+  if (networkId == 11155111) {
+    htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
+    htlcContractAddr = contractSepoliaAddr;
+  } else {
+    htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+    htlcContractAddr = contractMaticAddr;
+  }
+
+  const tx = await htlcContract.methods.revealSecret(secret);
   const encodedABI = await tx.encodeABI();
 
   if (encodedABI) {
@@ -250,13 +288,14 @@ const consolidateSwapIntoArray = async () => {
     .getSwapCount()
     .call(); // Get the total number of swaps in Sepolia
 
+  
   // Iterating through Matic Contract for swaps
   const activeSwapMatic = await SwapIterator(
     htlcMaticContract,
     web3Matic,
     swapMaticCount
   );
-
+  
   // Iterating through Sepolia Contract for swaps
   const activeSwapSepolia = await SwapIterator(
     htlcSepoliaContract,
