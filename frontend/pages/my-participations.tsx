@@ -10,6 +10,16 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
 import styles from "../styles/Request.module.css";
+import {
+  useAccount,
+  useNetwork,
+  useSendTransaction,
+  useSwitchNetwork,
+  useWaitForTransaction,
+} from "wagmi";
+import { useEffect, useState } from "react";
+import { getUsersSwapEngagments } from "../utils/apiService";
+import { parseEther } from "viem";
 
 interface Column {
   id: "token" | "amount" | "network" | "time" | "status" | "action";
@@ -49,38 +59,32 @@ const columns: readonly Column[] = [
   },
 ];
 
-interface Data {
-  token: string;
-  amount: string;
-  network: string;
-  time: number;
-  hash: string;
-  status: string;
-}
-
-function createData(
-  token: string,
-  amount: string,
-  network: string,
-  time: number,
-  hash: string,
-  status: string
-): Data {
-  return { token, amount, network, time, hash, status };
-}
-
-const rows = [
-  createData("USDT", "100", "Polygon -> BSC", 1, "", "revealed"),
-  createData("WETH", "20", "BSC -> Polygon", 1, "", "revealed"),
-  createData("BNB", "30", "BSC -> Polygon", 1, "", "expired"),
-  createData("CAKE", "1000", "Polygon -> BSC", 1, "", "expired"),
-  createData("AXPR", "5000", "BSC -> Polygon", 1, "", "expired"),
-  createData("USDC", "100", "Polygon -> BSC", 1, "", "revealed"),
-];
-
 const Participations = () => {
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const { address, isConnected } = useAccount();
+  const { chain } = useNetwork();
+  const { switchNetwork } = useSwitchNetwork();
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const [userEngagements, setUserEngagements] = useState([]);
+  const [txDetails, setTxDetails] = useState({
+    to: null,
+    data: null,
+    value: "0",
+  });
+
+  const { data, sendTransaction } = useSendTransaction({
+    to: String(txDetails.to),
+    data: String(txDetails.data),
+    value: txDetails.value
+      ? parseEther(String(txDetails.value))
+      : parseEther("0"),
+  });
+
+  const { isLoading, isSuccess } = useWaitForTransaction({
+    hash: data?.hash,
+  });
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -111,6 +115,25 @@ const Participations = () => {
     }
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await getUsersSwapEngagments(String(address));
+        setUserEngagements(result.userSwapEngagements);
+      } catch (error) {
+        console.error("Error approving token:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (txDetails.to) {
+      sendTransaction();
+    }
+  }, [txDetails]);
+
   return (
     <>
       <Topbar />
@@ -131,33 +154,33 @@ const Participations = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows
+              {userEngagements
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((row) => {
+                .map((engagement) => {
                   return (
                     <TableRow
                       hover
                       role="checkbox"
                       tabIndex={-1}
-                      key={row.hash}
+                      key={engagement.hash}
                     >
                       <TableCell key="token" align="left">
-                        {row.token}
+                        {engagement.tokenSymbol}
                       </TableCell>
                       <TableCell key="amount" align="left">
-                        {row.amount}
+                        {engagement.amount}
                       </TableCell>
                       <TableCell key="network" align="right">
-                        {row.network}
+                        {engagement.networkId}
                       </TableCell>
                       <TableCell key="time" align="right">
-                        {row.time}
+                        {engagement.timeLock}
                       </TableCell>
                       <TableCell key="status" align="center">
-                        {row.status}
+                        {engagement.status}
                       </TableCell>
                       <TableCell key="action" align="center">
-                        {renderActionButton(row.status)}
+                        {renderActionButton(engagement.status)}
                       </TableCell>
                     </TableRow>
                   );
@@ -168,7 +191,7 @@ const Participations = () => {
         <TablePagination
           rowsPerPageOptions={[10, 25, 100]}
           component="div"
-          count={rows.length}
+          count={userEngagements.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

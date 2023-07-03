@@ -56,6 +56,8 @@ const SwapIterator = async (htlcContract, web3, swapCount) => {
 const ConsolidateMaps = (mapA, mapB) => {
   const consolidatedArray = [];
 
+  console.log('mapA', mapA);
+  console.log('mapB', mapB);
   // Iterate over entries in mapA
   for (const [key, valueA] of mapA) {
     const valueB = mapB.get(key);
@@ -65,6 +67,7 @@ const ConsolidateMaps = (mapA, mapB) => {
       consolidatedArray.push({
         ...valueA,
         status: "ready",
+        receiver: valueA.receiver !== '0x0000000000000000000000000000000000000000' ? valueA.receiver : valueB.receiver,
         isCompleted: valueA.isCompleted || valueB.isCompleted,
         isClosed: valueA.isClosed || valueB.isClosed,
       });
