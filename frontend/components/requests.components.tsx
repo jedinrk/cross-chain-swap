@@ -16,14 +16,23 @@ import {
   getActiveSwapRequests,
 } from "../utils/apiService";
 import {
-  sepolia,
   useAccount,
   useNetwork,
   useSendTransaction,
   useSwitchNetwork,
   useWaitForTransaction,
 } from "wagmi";
+import {
+  mainnet,
+  sepolia,
+  polygon,
+  polygonMumbai,
+  bsc,
+  bscTestnet,
+} from "wagmi/chains";
 import { parseEther } from "viem";
+
+const sepoliaUSDK = "0xb852CdA1A01ed1eDE79Fe4885713055E1523fFf0";
 
 interface Column {
   id: "token" | "amount" | "network" | "time" | "action";
@@ -104,15 +113,15 @@ export default function Requests(props: any) {
 
   const processSwapRequest = async (swap: any) => {
     try {
-      console.log("processSwapRequest: ", swap)
+      console.log("processSwapRequest: ", swap);
       const txData = await engageSwapRequest(
         swap.hash,
         String(parseEther(swap.amount)),
         swap.tokenAddress,
-        "0xb852CdA1A01ed1eDE79Fe4885713055E1523fFf0",
+        sepoliaUSDK,
         swap.timeLock,
         swap.networkId,
-        chain ? chain.id : sepolia.id,
+        chain ? chain.id : sepolia.id
       );
 
       // Handle success or update state
@@ -124,10 +133,18 @@ export default function Requests(props: any) {
     }
   };
 
-  const isCorrectNetwork = () => {
+  const isCorrectNetwork = (swap: any) => {
     try {
-      if (chain?.id !== sepolia.id) {
-        switchNetwork?.(sepolia.id);
+      if (swap?.networkId == chain?.id) {
+        switch (chain?.id) {
+          case polygonMumbai.id:
+            switchNetwork?.(sepolia.id);
+            break;
+          default:
+          case sepolia.id:
+            switchNetwork?.(polygonMumbai.id);
+            break;
+        }
         return false;
       }
       return true;
@@ -136,16 +153,16 @@ export default function Requests(props: any) {
     }
   };
 
-  const handleButtonClick = async (swap: any) => {
+  const handleEngageButton = async (swap: any) => {
     try {
-      if (!isCorrectNetwork()) {
+      if (!isCorrectNetwork(swap)) {
         return;
       }
-      if ("0xb852CdA1A01ed1eDE79Fe4885713055E1523fFf0") {
+      if (sepoliaUSDK) {
         const allowance = await checkAllowance(
           chain ? chain.id : sepolia.id,
           String(address),
-          "0xb852CdA1A01ed1eDE79Fe4885713055E1523fFf0"
+          sepoliaUSDK
         );
 
         if (allowance) {
@@ -153,10 +170,7 @@ export default function Requests(props: any) {
           console.log("allowance: ", Number(allowance));
           console.log("input amount: ", swapAmount);
           if (swapAmount > Number(allowance)) {
-            processApproveToken(
-              "0xb852CdA1A01ed1eDE79Fe4885713055E1523fFf0",
-              swapAmount
-            );
+            processApproveToken(sepoliaUSDK, swapAmount);
           } else {
             await processSwapRequest(swap);
           }
@@ -233,7 +247,7 @@ export default function Requests(props: any) {
                     <TableCell key="action" align="center">
                       <Button
                         variant="contained"
-                        onClick={() => handleButtonClick(swap)}
+                        onClick={() => handleEngageButton(swap)}
                       >
                         Engage
                       </Button>
