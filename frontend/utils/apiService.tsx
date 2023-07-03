@@ -100,6 +100,22 @@ export const getUsersSwapRequests = async (
   }
 };
 
+
+export const getUsersSwapEngagments = async (
+  userAddress: string
+): Promise<any> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/getUsersSwapEngagments`, {
+      params: {
+        userAddress,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const engageSwapRequest = async (
   hash: string,
   amount: string,

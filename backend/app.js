@@ -137,35 +137,11 @@ app.post("/createSwapRequest", async (req, res) => {
 app.get("/getActiveSwapRequests", async (req, res) => {
   const { userAddress } = req.query;
 
-  const htlcMaticContract = new web3Matic.eth.Contract(
-    htlcAbi,
-    contractMaticAddr
+  const consolidatedArray = await consolidateSwapIntoArray();
+  const activeSwaps = consolidatedArray.filter(
+    (swap) => swap.sender !== userAddress && swap.status === "pending"
   );
-  const swapMaticCount = await htlcMaticContract.methods.getSwapCount().call(); // Get the total number of swaps in Matic
-
-  const htlcSepoliaContract = new web3Sepolia.eth.Contract(
-    htlcAbi,
-    contractSepoliaAddr
-  );
-  const swapSepoliaCount = await htlcSepoliaContract.methods
-    .getSwapCount()
-    .call(); // Get the total number of swaps in Sepolia
-
-  // Iterating through Matic Contract for swaps
-  const activeSwapMatic = await SwapIterator(
-    htlcMaticContract,
-    web3Matic,
-    swapMaticCount
-  );
-
-  // Iterating through Sepolia Contract for swaps
-  const activeSwapSepolia = await SwapIterator(
-    htlcSepoliaContract,
-    web3Sepolia,
-    swapSepoliaCount
-  );
-
-  const activeSwaps = ConsolidateMaps(activeSwapMatic, activeSwapSepolia);
+  console.log(activeSwaps);
 
   if (activeSwaps) {
     return res.status(200).json({ activeSwaps });
@@ -178,8 +154,41 @@ app.get("/getActiveSwapRequests", async (req, res) => {
  * Fetch users swap requests
  */
 app.get("/getUsersSwapRequests", async (req, res) => {
-  console.log(req.query);
-  return res.status(200).json({ data: [] });
+  const { userAddress } = req.query;
+
+  const consolidatedArray = await consolidateSwapIntoArray();
+
+  console.log("consolidatedArray ", consolidatedArray)
+  const userSwapRequests = consolidatedArray.filter(
+    (swap) => swap.sender === userAddress
+  );
+
+  console.log("userSwapRequests ", userSwapRequests);
+
+  if (userSwapRequests) {
+    return res.status(200).json({ userSwapRequests });
+  } else {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * Fetch users swap engagments
+ */
+app.get("/getUsersSwapEngagments", async (req, res) => {
+  const { userAddress } = req.query;
+
+  const consolidatedArray = await consolidateSwapIntoArray();
+
+  const userSwapEngagements = consolidatedArray.filter(
+    (swap) => swap.receiver === userAddress
+  );
+
+  if (userSwapEngagements) {
+    return res.status(200).json({ userSwapEngagements });
+  } else {
+    return res.status(400).json({ error: error.message });
+  }
 });
 
 /**
@@ -222,3 +231,39 @@ app.post("/engageSwapRequest", async (req, res) => {
 app.listen(process.env.PORT, function () {
   console.log("Listening on port 5050");
 });
+
+/**
+ * Common logic to fetch all the swap request from contracts and consolidate into an array with status.
+ */
+const consolidateSwapIntoArray = async () => {
+  const htlcMaticContract = new web3Matic.eth.Contract(
+    htlcAbi,
+    contractMaticAddr
+  );
+  const swapMaticCount = await htlcMaticContract.methods.getSwapCount().call(); // Get the total number of swaps in Matic
+
+  const htlcSepoliaContract = new web3Sepolia.eth.Contract(
+    htlcAbi,
+    contractSepoliaAddr
+  );
+  const swapSepoliaCount = await htlcSepoliaContract.methods
+    .getSwapCount()
+    .call(); // Get the total number of swaps in Sepolia
+
+  // Iterating through Matic Contract for swaps
+  const activeSwapMatic = await SwapIterator(
+    htlcMaticContract,
+    web3Matic,
+    swapMaticCount
+  );
+
+  // Iterating through Sepolia Contract for swaps
+  const activeSwapSepolia = await SwapIterator(
+    htlcSepoliaContract,
+    web3Sepolia,
+    swapSepoliaCount
+  );
+
+  const consolidateArray = ConsolidateMaps(activeSwapMatic, activeSwapSepolia);
+  return consolidateArray;
+};

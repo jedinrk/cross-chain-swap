@@ -1,13 +1,33 @@
 const Web3 = require("web3");
 const erc20Abi = require("./abi/erc20.json");
 
-
-const SwapRequest = (tokenAddress, tokenSymbol, amount, network, timeLock, hash, isCompleted, isClosed) => {
-  return { tokenAddress, tokenSymbol, amount, network, timeLock, hash, isCompleted,  isClosed};
+const SwapRequest = (
+  sender,
+  receiver,
+  tokenAddress,
+  tokenSymbol,
+  amount,
+  network,
+  timeLock,
+  hash,
+  isCompleted,
+  isClosed
+) => {
+  return {
+    sender,
+    receiver,
+    tokenAddress,
+    tokenSymbol,
+    amount,
+    network,
+    timeLock,
+    hash,
+    isCompleted,
+    isClosed,
+  };
 };
 
-
-const SwapIterator = async (htlcContract, web3, swapCount ) => {
+const SwapIterator = async (htlcContract, web3, swapCount) => {
   const activeSwapMap = new Map();
   for (let i = 0; i < swapCount; i++) {
     const swapByIndex = await htlcContract.methods.getSwapByIndex(i).call(); // Get the swap hash at index i
@@ -16,6 +36,8 @@ const SwapIterator = async (htlcContract, web3, swapCount ) => {
     const tokenSymbol = await tokenContract.methods.symbol().call();
 
     const swapRequest = SwapRequest(
+      result[0],
+      result[1],
       result[3],
       tokenSymbol,
       Web3.utils.fromWei(result[2], "ether"),
@@ -26,11 +48,11 @@ const SwapIterator = async (htlcContract, web3, swapCount ) => {
       result[9]
     );
 
-    activeSwapMap.set(result[6],swapRequest);
+    activeSwapMap.set(result[6], swapRequest);
   }
 
   return activeSwapMap;
-}
+};
 
 const ConsolidateMaps = (mapA, mapB) => {
   const consolidatedArray = [];
@@ -43,7 +65,9 @@ const ConsolidateMaps = (mapA, mapB) => {
       // Both maps have the same key, add object with 'ready' status
       consolidatedArray.push({
         ...valueA,
-        status: 'ready'
+        status: "ready",
+        isCompleted: valueA.isCompleted || valueB.isCompleted,
+        isClosed: valueA.isClosed || valueB.isClosed,
       });
 
       // Remove the entry from mapB to handle remaining entries in mapB later
@@ -52,7 +76,7 @@ const ConsolidateMaps = (mapA, mapB) => {
       // Only mapA has the key, add object with 'pending' status
       consolidatedArray.push({
         ...valueA,
-        status: 'pending'
+        status: "pending",
       });
     }
   }
@@ -62,13 +86,12 @@ const ConsolidateMaps = (mapA, mapB) => {
     // Only mapB has the key, add object with 'pending' status
     consolidatedArray.push({
       ...valueB,
-      status: 'pending'
+      status: "pending",
     });
   }
 
   return consolidatedArray;
 };
-
 
 module.exports = {
   SwapRequest,
