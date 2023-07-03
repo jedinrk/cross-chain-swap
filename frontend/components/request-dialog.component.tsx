@@ -8,7 +8,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import IconButton from "@mui/material/IconButton";
 import { useDebounce } from "use-debounce";
 import {
+  sepolia,
   useAccount,
+  useNetwork,
   usePrepareSendTransaction,
   useSendTransaction,
   useWaitForTransaction,
@@ -18,6 +20,7 @@ import { parseEther } from "viem";
 
 const RequestDialog = (props: any) => {
   const { address, isConnected } = useAccount();
+  const { chain } = useNetwork();
 
   const { onClose } = props;
 
@@ -25,6 +28,7 @@ const RequestDialog = (props: any) => {
   const [amount, setAmount] = useState("0");
   const [debouncedAmount] = useDebounce(amount, 500);
   const [token, setToken] = useState("");
+  const [receiveToken, setRecieveToken] = useState("");
   const [timeLock, setTimeLock] = useState(900); // Default 15 mins
 
   const [requireApproval, setRequireApproval] = useState(false);
@@ -55,7 +59,11 @@ const RequestDialog = (props: any) => {
     setAmount(e.target.value);
 
     if (token) {
-      const allowance = await checkAllowance(String(address), token);
+      const allowance = await checkAllowance(
+        chain ? chain.id : sepolia.id,
+        String(address),
+        token
+      );
 
       if (allowance) {
         console.log("allowance: ", Number(allowance));
@@ -77,12 +85,22 @@ const RequestDialog = (props: any) => {
     setToken(e.target.value);
   };
 
+  const handleRecieveTokenChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setRecieveToken(e.target.value);
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // Perform API request here using hash, amount, and token
     try {
-      const txData = await createSwapRequest(hash, String(parseEther(amount)), token, timeLock);
+      const txData = await createSwapRequest(
+        chain ? chain.id : sepolia.id,
+        hash,
+        String(parseEther(amount)),
+        token,
+        timeLock,
+      );
       console.log("Swap request created:", txData);
 
       // Handle success or update state
@@ -98,12 +116,13 @@ const RequestDialog = (props: any) => {
     setHash("");
     setAmount(0);
     setToken("");
+    setRecieveToken("");
     setTimeLock(0);
   };
 
   const handleApproveButton = async () => {
     try {
-      const txData = await approveToken(String(token), amount);
+      const txData = await approveToken(chain ? chain.id : sepolia.id, String(token), amount);
       console.log("Approve token:", txData);
 
       // Handle success or update state
@@ -163,6 +182,15 @@ const RequestDialog = (props: any) => {
             id="timeLock"
             value={timeLock}
             onChange={handleTimeLockChange}
+          />
+        </div>
+        <div>
+          <label htmlFor="token">Receivable Token</label>
+          <input
+            type="text"
+            id="receiveToken"
+            value={receiveToken}
+            onChange={handleRecieveTokenChange}
           />
         </div>
         {requireApproval ? (

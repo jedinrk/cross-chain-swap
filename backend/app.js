@@ -12,12 +12,16 @@ const Web3 = require("web3");
 const htlcAbi = require("./abi/htlc.json");
 const erc20Abi = require("./abi/erc20.json");
 
-const web3Bsc = new Web3(new Web3.providers.HttpProvider(process.env.BSC_RPC));
+//const web3Bsc = new Web3(new Web3.providers.HttpProvider(process.env.BSC_RPC));
+const web3Sepolia = new Web3(
+  new Web3.providers.HttpProvider(process.env.SEPOLIA_RPC)
+);
 const web3Matic = new Web3(
   new Web3.providers.HttpProvider(process.env.POLYGON_RPC)
 );
 
-const contractMaticAddr = process.env.HTLC_CONTRACT_ADDRESS;
+const contractMaticAddr = process.env.HTLC_MATIC_CONTRACT_ADDRESS;
+const contractSepoliaAddr = process.env.HTLC_SEPOLIA_CONTRACT_ADDRESS;
 
 /**
  * Generates the hash for the provided secret key
@@ -40,12 +44,20 @@ app.post("/generatehash", async (req, res) => {
  * Get the number of tokens that the Murabah router is allowed to spend
  */
 app.get("/approve/allowance", async (req, res) => {
-  const { userAddress, tokenAddress } = req.query;
+  const { networkId, userAddress, tokenAddress } = req.query;
 
-  const tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
+  let tokenContract;
+  let htlcContractAddr;
+  if (networkId == 11155111) {
+    tokenContract = new web3Sepolia.eth.Contract(erc20Abi, tokenAddress);
+    htlcContractAddr = contractSepoliaAddr;
+  } else {
+    tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
+    htlcContractAddr = contractMaticAddr;
+  }
 
   const allowance = await tokenContract.methods
-    .allowance(userAddress, contractMaticAddr)
+    .allowance(userAddress, htlcContractAddr)
     .call();
   if (allowance) {
     return res.status(200).json({ allowance: allowance });
@@ -58,11 +70,19 @@ app.get("/approve/allowance", async (req, res) => {
  * Generate data for calling the token contract in order to allow the Murabah router for spend funds
  */
 app.get("/approve/transaction", async (req, res) => {
-  const { tokenAddress, amount } = req.query;
+  const { networkId, tokenAddress, amount } = req.query;
 
-  const tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
+  let tokenContract;
+  let htlcContractAddr;
+  if (networkId == 11155111) {
+    tokenContract = new web3Sepolia.eth.Contract(erc20Abi, tokenAddress);
+    htlcContractAddr = contractSepoliaAddr;
+  } else {
+    tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
+    htlcContractAddr = contractMaticAddr;
+  }
 
-  const tx = await tokenContract.methods.approve(contractMaticAddr, amount);
+  const tx = await tokenContract.methods.approve(htlcContractAddr, amount);
   const encodedABI = await tx.encodeABI();
 
   if (encodedABI) {
@@ -81,9 +101,17 @@ app.get("/approve/transaction", async (req, res) => {
  */
 app.post("/createSwapRequest", async (req, res) => {
   console.log("createSwapRequest", req.body);
-  const { hash, amount, token, lockTime } = req.body;
+  const { hash, amount, token, lockTime, networkId } = req.body;
 
-  const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+  let htlcContract;
+  let htlcContractAddr;
+  if (networkId == 11155111) {
+    htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
+    htlcContractAddr = contractSepoliaAddr;
+  } else {
+    htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+    htlcContractAddr = contractMaticAddr;
+  }
 
   const tx = await htlcContract.methods.lockTokens(
     hash,
@@ -95,7 +123,7 @@ app.post("/createSwapRequest", async (req, res) => {
 
   if (encodedABI) {
     return res.status(200).json({
-      to: contractMaticAddr,
+      to: htlcContractAddr,
       data: encodedABI,
     });
   } else {
@@ -124,14 +152,14 @@ app.get("/getActiveSwapRequests", async (req, res) => {
     const swapRequest = SwapRequest(
       result[3],
       tokenSymbol,
-      Web3.utils.fromWei(result[2], 'ether'),
+      Web3.utils.fromWei(result[2], "ether"),
       "Matic -> BSC",
       result[5],
       result[6],
       result[8],
       result[9]
     );
-    
+
     activeSwaps.push(swapRequest);
   }
 
@@ -148,6 +176,42 @@ app.get("/getActiveSwapRequests", async (req, res) => {
 app.get("/getUsersSwapRequests", async (req, res) => {
   console.log(req.query);
   return res.status(200).json({ data: [] });
+});
+
+/**
+ * Creates a swap request for a user with the hashed secret
+ *
+ */
+app.post("/engageSwapRequest", async (req, res) => {
+  console.log("engageSwapRequest", req.body);
+  const { hash, amount, sendToken, recieveToken, lockTime, networkId } = req.body;
+
+  let htlcContract;
+  let htlcContractAddr;
+  if (networkId == 11155111) {
+    htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
+    htlcContractAddr = contractSepoliaAddr;
+  } else {
+    htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+    htlcContractAddr = contractMaticAddr;
+  }
+
+  const tx = await htlcContract.methods.lockTokens(
+    hash,
+    amount,
+    recieveToken,
+    lockTime
+  );
+  const encodedABI = await tx.encodeABI();
+
+  if (encodedABI) {
+    return res.status(200).json({
+      to: htlcContractAddr,
+      data: encodedABI,
+    });
+  } else {
+    return res.status(400).json({ error: "encodeABI error" });
+  }
 });
 
 app.listen(process.env.PORT, function () {

@@ -22,12 +22,13 @@ export const generateHash = async (secret: string): Promise<any> => {
 };
 
 export const checkAllowance = async (
+  networkId: Number,
   userAddress: string,
   tokenAddress: string
 ): Promise<any> => {
   try {
     const response = await axios.get(`${API_BASE_URL}/approve/allowance`, {
-      params: { userAddress, tokenAddress },
+      params: { networkId, userAddress, tokenAddress },
     });
     return response.data.allowance;
   } catch (error) {
@@ -36,12 +37,13 @@ export const checkAllowance = async (
 };
 
 export const approveToken = async (
+  networkId: Number,
   tokenAddress: string,
-  amount: Number
+  amount: String
 ): Promise<any> => {
   try {
     const response = await axios.get(`${API_BASE_URL}/approve/transaction`, {
-      params: { tokenAddress, amount },
+      params: { networkId, tokenAddress, amount },
     });
     return response.data;
   } catch (error) {
@@ -50,6 +52,7 @@ export const approveToken = async (
 };
 
 export const createSwapRequest = async (
+  networkId: Number,
   hash: string,
   amount: string,
   token: string,
@@ -61,6 +64,7 @@ export const createSwapRequest = async (
       amount,
       token,
       lockTime,
+      networkId
     });
     return response.data;
   } catch (error) {
@@ -95,3 +99,27 @@ export const getUsersSwapRequests = async (
     throw error;
   }
 };
+
+export const engageSwapRequest = async (
+  hash: string,
+  amount: string,
+  sendToken: string,
+  recieveToken: string,
+  lockTime: number,
+  networkId: Number
+): Promise<any> => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/engageSwapRequest`, {
+      hash,
+      amount,
+      sendToken,
+      recieveToken,
+      lockTime,
+      networkId
+    });
+    return response.data;
+  } catch (error) {
+    throw error; //error.response ? error.response.data : error.message;
+  }
+};
+

@@ -5,7 +5,7 @@ import type { AppProps } from 'next/app';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import {
   mainnet,
-  goerli,
+  sepolia,
   polygon,
   polygonMumbai,
   bsc,
@@ -16,6 +16,7 @@ import { publicProvider } from 'wagmi/providers/public';
 const { chains, publicClient, webSocketPublicClient } = configureChains(
   [
     mainnet,
+    sepolia,
     polygon,
     polygonMumbai,
     bsc,

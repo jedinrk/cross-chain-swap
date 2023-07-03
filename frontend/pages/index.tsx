@@ -7,6 +7,7 @@ import Button from "@mui/material/Button";
 import { useState } from "react";
 import { createSwapRequest, generateHash } from "../utils/apiService";
 import RequestDialog from "../components/request-dialog.component";
+import EngageDialog from "../components/engage.component"
 import Dialog from "@mui/material/Dialog";
 
 const Home: NextPage = () => {
@@ -21,7 +22,7 @@ const Home: NextPage = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
   };
-
+  
   const handleGenerateHash = async () => {
     try {
       const hash = await generateHash(inputtedSecret);
@@ -63,7 +64,7 @@ const Home: NextPage = () => {
         </Button>
       </div>
       <div className={styles.requestList}>
-        <Requests />
+        <Requests/>
       </div>
       <Dialog open={isDialogOpen}>
         <RequestDialog onClose={handleCloseDialog}/>
