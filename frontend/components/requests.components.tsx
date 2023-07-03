@@ -11,6 +11,7 @@ import Button from "@mui/material/Button";
 import { useEffect, useState } from "react";
 import { getActiveSwapRequests } from "../utils/apiService";
 import { useAccount } from "wagmi";
+import { createData } from "../utils/common";
 
 interface Column {
   id: "token" | "amount" | "network" | "time" | "action";
@@ -44,33 +45,6 @@ const columns: readonly Column[] = [
   },
 ];
 
-interface Data {
-  token: string;
-  amount: string;
-  network: string;
-  time: number;
-  hash: string;
-}
-
-function createData(
-  token: string,
-  amount: string,
-  network: string,
-  time: number,
-  hash: string
-): Data {
-  return { token, amount, network, time, hash };
-}
-
-const rows = [
-  createData("USDT", "100", "Polygon -> BSC", 1, ""),
-  createData("WETH", "20", "BSC -> Polygon", 1, ""),
-  createData("BNB", "30", "BSC -> Polygon", 1, ""),
-  createData("CAKE", "1000", "Polygon -> BSC", 1, ""),
-  createData("AXPR", "5000", "BSC -> Polygon", 1, ""),
-  createData("USDC", "100", "Polygon -> BSC", 1, ""),
-];
-
 export default function Requests() {
   const { address, isConnected } = useAccount();
 
@@ -92,7 +66,8 @@ export default function Requests() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await getActiveSwapRequests(String(address));
+        const result = await getActiveSwapRequests(String(address));
+        setActiveSwaps(result.activeSwaps);
       } catch (error) {
         console.error("Error approving token:", error);
       }
@@ -119,22 +94,27 @@ export default function Requests() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows
+            {activeSwaps
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => {
+              .map((swap) => {
                 return (
-                  <TableRow hover role="checkbox" tabIndex={-1} key={row.hash}>
+                  <TableRow
+                    hover
+                    role="checkbox"
+                    tabIndex={-1}
+                    key={swap.hash}
+                  >
                     <TableCell key="token" align="left">
-                      {row.token}
+                      {swap.tokenSymbol}
                     </TableCell>
                     <TableCell key="amount" align="left">
-                      {row.amount}
+                      {swap.amount}
                     </TableCell>
                     <TableCell key="network" align="right">
-                      {row.network}
+                      {swap.network}
                     </TableCell>
                     <TableCell key="time" align="right">
-                      {row.time}
+                      {`${swap.time} seconds`}
                     </TableCell>
                     <TableCell key="action" align="center">
                       <Button variant="contained">Engage</Button>
@@ -148,7 +128,7 @@ export default function Requests() {
       <TablePagination
         rowsPerPageOptions={[10, 25, 100]}
         component="div"
-        count={rows.length}
+        count={activeSwaps.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}

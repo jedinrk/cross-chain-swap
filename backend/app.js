@@ -1,4 +1,5 @@
 require("dotenv").config();
+const { SwapRequest } = require("./utils");
 
 /** Express JS and CORS configrations */
 var express = require("express");
@@ -16,7 +17,7 @@ const web3Matic = new Web3(
   new Web3.providers.HttpProvider(process.env.POLYGON_RPC)
 );
 
-const contractMaticAddr = "0xAcFD8930700605a1A3904aEa675d9F7068b5f2C9";
+const contractMaticAddr = process.env.HTLC_CONTRACT_ADDRESS;
 
 /**
  * Generates the hash for the provided secret key
@@ -110,21 +111,32 @@ app.get("/getActiveSwapRequests", async (req, res) => {
 
   const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
 
-  const swapCount = await htlcContract.methods.swapCount().call(); // Get the total number of swaps
+  const swapCount = await htlcContract.methods.getSwapCount().call(); // Get the total number of swaps
 
-  const swapList = [];
+  const activeSwaps = [];
 
   for (let i = 0; i < swapCount; i++) {
-    const swapHash = await htlcContract.methods.swapHashes(i).call(); // Get the swap hash at index i
-    const swap = await htlcContract.methods.swaps(swapHash).call(); // Get the swap details using the hash
-    swapList.push(swap);
+    const swapByIndex = await htlcContract.methods.getSwapByIndex(i).call(); // Get the swap hash at index i
+    const result = await htlcContract.methods.swaps(swapByIndex[6]).call(); // Get the swap details using the hash
+    const tokenContract = new web3Matic.eth.Contract(erc20Abi, result[3]);
+    const tokenSymbol = await tokenContract.methods.symbol().call();
+
+    const swapRequest = SwapRequest(
+      result[3],
+      tokenSymbol,
+      result[2],
+      "Matic -> BSC",
+      result[5],
+      result[6],
+      result[8],
+      result[9]
+    );
+    
+    activeSwaps.push(swapRequest);
   }
 
-
-  //const swaps = await htlcContract.methods.swaps().call();
-  if (swapList) {
-    console.log('swapList ', swapList);
-    return res.status(200).json({ swaps });
+  if (activeSwaps) {
+    return res.status(200).json({ activeSwaps });
   } else {
     return res.status(400).json({ error: error.message });
   }
