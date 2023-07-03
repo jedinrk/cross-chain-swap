@@ -8,6 +8,9 @@ import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
+import { useEffect, useState } from "react";
+import { getActiveSwapRequests } from "../utils/apiService";
+import { useAccount } from "wagmi";
 
 interface Column {
   id: "token" | "amount" | "network" | "time" | "action";
@@ -69,8 +72,11 @@ const rows = [
 ];
 
 export default function Requests() {
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const { address, isConnected } = useAccount();
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [activeSwaps, setActiveSwaps] = useState([]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -82,6 +88,18 @@ export default function Requests() {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await getActiveSwapRequests(String(address));
+      } catch (error) {
+        console.error("Error approving token:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <Paper sx={{ width: "100%", overflow: "hidden" }}>

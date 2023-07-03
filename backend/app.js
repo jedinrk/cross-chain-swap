@@ -26,9 +26,7 @@ app.post("/generatehash", async (req, res) => {
 
   const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
 
-  const generatedHash = await htlcContract.methods
-    .generateHash(secret)
-    .call();
+  const generatedHash = await htlcContract.methods.generateHash(secret).call();
 
   if (generatedHash) {
     return res.status(200).json({ hash: generatedHash });
@@ -81,7 +79,7 @@ app.get("/approve/transaction", async (req, res) => {
  *
  */
 app.post("/createSwapRequest", async (req, res) => {
-  console.log('createSwapRequest', req.body)
+  console.log("createSwapRequest", req.body);
   const { hash, amount, token, lockTime } = req.body;
 
   const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
@@ -107,15 +105,35 @@ app.post("/createSwapRequest", async (req, res) => {
 /**
  * Fetch all the active swap request
  */
-app.get("/getActiveSwapRequests", function (req, res) {
-  console.log(req.query);
-  return res.status(200).json({ data: [] });
+app.get("/getActiveSwapRequests", async (req, res) => {
+  const { userAddress } = req.query;
+
+  const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+
+  const swapCount = await htlcContract.methods.swapCount().call(); // Get the total number of swaps
+
+  const swapList = [];
+
+  for (let i = 0; i < swapCount; i++) {
+    const swapHash = await htlcContract.methods.swapHashes(i).call(); // Get the swap hash at index i
+    const swap = await htlcContract.methods.swaps(swapHash).call(); // Get the swap details using the hash
+    swapList.push(swap);
+  }
+
+
+  //const swaps = await htlcContract.methods.swaps().call();
+  if (swapList) {
+    console.log('swapList ', swapList);
+    return res.status(200).json({ swaps });
+  } else {
+    return res.status(400).json({ error: error.message });
+  }
 });
 
 /**
  * Fetch users swap requests
  */
-app.get("/getUsersSwapRequests", function (req, res) {
+app.get("/getUsersSwapRequests", async (req, res) => {
   console.log(req.query);
   return res.status(200).json({ data: [] });
 });
