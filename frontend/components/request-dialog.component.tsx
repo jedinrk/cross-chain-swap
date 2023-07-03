@@ -97,7 +97,7 @@ const RequestDialog = (props: any) => {
       const txData = await createSwapRequest(
         chain ? chain.id : sepolia.id,
         hash,
-        String(parseEther(amount)),
+        String(parseEther(amount, 'wei')),
         token,
         timeLock,
       );
@@ -122,7 +122,7 @@ const RequestDialog = (props: any) => {
 
   const handleApproveButton = async () => {
     try {
-      const txData = await approveToken(chain ? chain.id : sepolia.id, String(token), amount);
+      const txData = await approveToken(chain ? chain.id : sepolia.id, String(token), String(parseEther(amount, 'wei')));
       console.log("Approve token:", txData);
 
       // Handle success or update state

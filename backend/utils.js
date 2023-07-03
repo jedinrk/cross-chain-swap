@@ -10,6 +10,7 @@ const SwapRequest = (
   networkId,
   timeLock,
   hash,
+  secret,
   isCompleted,
   isClosed
 ) => {
@@ -22,6 +23,7 @@ const SwapRequest = (
     networkId,
     timeLock,
     hash,
+    secret,
     isCompleted,
     isClosed,
   };
@@ -43,6 +45,7 @@ const SwapIterator = async (htlcContract, web3, swapCount) => {
       result[2],
       result[6],
       result[7],
+      result[8],
       result[9],
       result[10]
     );
@@ -56,8 +59,6 @@ const SwapIterator = async (htlcContract, web3, swapCount) => {
 const ConsolidateMaps = (mapA, mapB) => {
   const consolidatedArray = [];
 
-  console.log('mapA', mapA);
-  console.log('mapB', mapB);
   // Iterate over entries in mapA
   for (const [key, valueA] of mapA) {
     const valueB = mapB.get(key);
@@ -67,7 +68,7 @@ const ConsolidateMaps = (mapA, mapB) => {
       consolidatedArray.push({
         ...valueA,
         status: "ready",
-        receiver: valueA.receiver !== '0x0000000000000000000000000000000000000000' ? valueA.receiver : valueB.receiver,
+        secret: valueA.secret !== ''? valueA.secret : valueB.secret,
         isCompleted: valueA.isCompleted || valueB.isCompleted,
         isClosed: valueA.isClosed || valueB.isClosed,
       });
@@ -92,6 +93,7 @@ const ConsolidateMaps = (mapA, mapB) => {
     });
   }
 
+  console.log("consolidatedArray", consolidatedArray);
   return consolidatedArray;
 };
 

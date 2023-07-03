@@ -17,8 +17,16 @@ import {
   useSwitchNetwork,
   useWaitForTransaction,
 } from "wagmi";
+import {
+  mainnet,
+  sepolia,
+  polygon,
+  polygonMumbai,
+  bsc,
+  bscTestnet,
+} from "wagmi/chains";
 import { useEffect, useState } from "react";
-import { getUsersSwapEngagments } from "../utils/apiService";
+import { getUsersSwapEngagments, revealSecret } from "../utils/apiService";
 import { parseEther } from "viem";
 
 interface Column {
@@ -97,11 +105,17 @@ const Participations = () => {
     setPage(0);
   };
 
-  const renderActionButton = (status: string) => {
-    switch (status) {
-      case "revealed":
+  const renderActionButton = (userEngagement: any) => {
+    switch (userEngagement.status) {
+      case "ready":
         return (
-          <Button variant="contained" className={styles.button}>
+          <Button
+            variant="contained"
+            className={styles.button}
+            onClick={() => {
+              handleSwapButton(userEngagement);
+            }}
+          >
             Swap
           </Button>
         );
@@ -112,6 +126,48 @@ const Participations = () => {
             Withdraw
           </Button>
         );
+    }
+  };
+
+  const isCorrectNetwork = (userEngagement: any) => {
+    console.log(userEngagement);
+    try {
+      if (
+        userEngagement?.isCompleted &&
+        userEngagement?.networkId != chain?.id
+      ) {
+        switch (chain?.id) {
+          case polygonMumbai.id:
+            switchNetwork?.(sepolia.id);
+            break;
+          default:
+          case sepolia.id:
+            switchNetwork?.(polygonMumbai.id);
+            break;
+        }
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.log(` Error Checking network: ${error}`);
+    }
+  };
+
+  const handleSwapButton = async (request: any) => {
+    try {
+      if (!isCorrectNetwork(request)) {
+        return;
+      }
+      const txData = await revealSecret(
+        request.secret,
+        chain ? chain.id : sepolia.id
+      );
+      if (txData) {
+        setTxDetails(txData);
+      }
+    } catch (error) {
+      console.log(`error processing swap token, ${error}`);
     }
   };
 
@@ -180,7 +236,7 @@ const Participations = () => {
                         {engagement.status}
                       </TableCell>
                       <TableCell key="action" align="center">
-                        {renderActionButton(engagement.status)}
+                        {renderActionButton(engagement)}
                       </TableCell>
                     </TableRow>
                   );

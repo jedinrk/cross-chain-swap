@@ -182,7 +182,7 @@ app.get("/getUsersSwapEngagments", async (req, res) => {
   const consolidatedArray = await consolidateSwapIntoArray();
 
   const userSwapEngagements = consolidatedArray.filter(
-    (swap) => swap.receiver === userAddress
+    (swap) => swap.secret !== ""
   );
 
   if (userSwapEngagements) {
