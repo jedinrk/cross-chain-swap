@@ -12,12 +12,20 @@ import Button from "@mui/material/Button";
 import styles from "../styles/Request.module.css";
 import { getUsersSwapRequests, revealSecret } from "../utils/apiService";
 import {
-  sepolia,
   useAccount,
   useNetwork,
   useSendTransaction,
+  useSwitchNetwork,
   useWaitForTransaction,
 } from "wagmi";
+import {
+  mainnet,
+  sepolia,
+  polygon,
+  polygonMumbai,
+  bsc,
+  bscTestnet,
+} from "wagmi/chains";
 import { useEffect, useState } from "react";
 import { parseEther } from "viem";
 import IconButton from "@mui/material/IconButton";
@@ -64,8 +72,11 @@ const columns: readonly Column[] = [
 const MyRequests = () => {
   const { address, isConnected } = useAccount();
   const { chain } = useNetwork();
+  const { switchNetwork } = useSwitchNetwork();
+
   const [secret, setSecret] = useState("");
   const [showInput, setShowInput] = useState(false);
+
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -107,8 +118,11 @@ const MyRequests = () => {
     setSecret(inputtedValue);
   };
 
-  const handleRevealSecret = async () => {
+  const handleRevealSecret = async (request: any) => {
     try {
+      if (!isCorrectNetwork(request)) {
+        return;
+      }
       const txData = await revealSecret(secret, chain ? chain.id : sepolia.id);
       if (txData) {
         setTxDetails(txData);
@@ -146,7 +160,7 @@ const MyRequests = () => {
     }
   };
 
-  const renderRevealSecret = () => {
+  const renderRevealSecret = (request: any) => {
     return (
       <div>
         <input
@@ -155,12 +169,37 @@ const MyRequests = () => {
             handleInputSecret(e.target.value);
           }}
         />
-        <button onClick={handleRevealSecret}>Reveal</button>
+        <button onClick={() => handleRevealSecret(request)}>Reveal</button>
         <IconButton onClick={handleSwapButton}>
           <CloseIcon />
         </IconButton>
       </div>
     );
+  };
+
+  const isCorrectNetwork = (userRequest: any) => {
+    console.log(userRequest);
+    try {
+      if (
+        userRequest?.sender == address &&
+        userRequest?.networkId == chain?.id
+      ) {
+        switch (chain?.id) {
+          case polygonMumbai.id:
+            switchNetwork?.(sepolia.id);
+            break;
+          default:
+          case sepolia.id:
+            switchNetwork?.(polygonMumbai.id);
+            break;
+        }
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.log(` Error Checking network: ${error}`);
+    }
   };
 
   useEffect(() => {
@@ -229,7 +268,7 @@ const MyRequests = () => {
                       </TableCell>
                       <TableCell key="action" align="center">
                         {showInput
-                          ? renderRevealSecret()
+                          ? renderRevealSecret(request)
                           : renderActionButton(request.status)}
                       </TableCell>
                     </TableRow>

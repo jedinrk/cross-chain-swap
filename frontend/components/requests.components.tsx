@@ -60,7 +60,7 @@ const columns: readonly Column[] = [
 export default function Requests(props: any) {
   const { address, isConnected } = useAccount();
   const { chain } = useNetwork();
-  const { chains, error, pendingChainId, switchNetwork } = useSwitchNetwork();
+  const { switchNetwork } = useSwitchNetwork();
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
