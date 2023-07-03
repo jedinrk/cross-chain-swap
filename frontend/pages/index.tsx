@@ -6,24 +6,20 @@ import Requests from "../components/requests.components";
 import Button from "@mui/material/Button";
 import { useState } from "react";
 import { createSwapRequest, generateHash } from "../utils/apiService";
+import RequestDialog from "../components/request-dialog.component";
+import Dialog from "@mui/material/Dialog";
 
 const Home: NextPage = () => {
+  const [isDialogOpen, setDialogOpen] = useState(false);
   const [inputtedSecret, setInputtedSecret] = useState("");
   const [generatedHash, setGeneratedHash] = useState("");
-  const handleCreateSwapRequest = async () => {
-    try {
-      const response = await createSwapRequest(
-        "hash_value",
-        100,
-        "token_value",
-        "user_address"
-      );
-      console.log("Swap request created:", response);
-      // Handle success or update state
-    } catch (error) {
-      console.error("Error creating swap request:", error);
-      // Handle error or show error message
-    }
+
+  const handleOpenDialog = () => {
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
   };
 
   const handleGenerateHash = async () => {
@@ -61,7 +57,7 @@ const Home: NextPage = () => {
         <Button
           variant="contained"
           className={styles.requestButton}
-          onClick={handleCreateSwapRequest}
+          onClick={handleOpenDialog}
         >
           Create Request
         </Button>
@@ -69,6 +65,10 @@ const Home: NextPage = () => {
       <div className={styles.requestList}>
         <Requests />
       </div>
+      <Dialog open={isDialogOpen}>
+        <RequestDialog onClose={handleCloseDialog}/>
+      </Dialog>
+      
     </div>
   );
 };

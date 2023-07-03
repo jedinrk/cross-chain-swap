@@ -25,14 +25,14 @@ export const createSwapRequest = async (
   hash: string,
   amount: number,
   token: string,
-  userAddress: string
+  lockTime: number
 ): Promise<any> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/createSwapRequest`, {
       hash,
       amount,
       token,
-      userAddress,
+      lockTime,
     });
     return response.data;
   } catch (error) {

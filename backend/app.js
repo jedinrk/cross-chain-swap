@@ -81,15 +81,15 @@ app.get("/approve/transaction", async (req, res) => {
  *
  */
 app.post("/createSwapRequest", async (req, res) => {
-  console.log(req.query);
-  const { hash, amount, tokenAddress, lockTime, userAddress } = req.query;
+  console.log('createSwapRequest', req.body)
+  const { hash, amount, token, lockTime } = req.body;
 
   const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
 
   const tx = await htlcContract.methods.lockTokens(
     hash,
     amount,
-    tokenAddress,
+    token,
     lockTime
   );
   const encodedABI = await tx.encodeABI();
