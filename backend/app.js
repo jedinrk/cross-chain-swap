@@ -1,18 +1,16 @@
 require("dotenv").config();
-const { SwapIterator, ConsolidateMaps } = require("./utils");
-
-/** Express JS and CORS configrations */
-var express = require("express");
+const express = require("express");
 const cors = require("cors");
-var app = express();
-app.use(cors());
-app.use(express.json());
-
 const Web3 = require("web3");
 const htlcAbi = require("./abi/htlc.json");
 const erc20Abi = require("./abi/erc20.json");
+const { SwapIterator, ConsolidateMaps } = require("./utils");
 
-//const web3Bsc = new Web3(new Web3.providers.HttpProvider(process.env.BSC_RPC));
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Initialize Web3 instances
 const web3Sepolia = new Web3(
   new Web3.providers.HttpProvider(process.env.SEPOLIA_RPC)
 );
@@ -27,282 +25,289 @@ const contractSepoliaAddr = process.env.HTLC_SEPOLIA_CONTRACT_ADDRESS;
  * Generates the hash for the provided secret key
  */
 app.post("/generatehash", async (req, res) => {
-  const { secret } = req.body;
+  try {
+    const { secret } = req.body;
+    const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+    const generatedHash = await htlcContract.methods.generateHash(secret).call();
 
-  const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
-
-  const generatedHash = await htlcContract.methods.generateHash(secret).call();
-
-  if (generatedHash) {
     return res.status(200).json({ hash: generatedHash });
-  } else {
-    return res.status(400).json({ error: error.message });
+  } catch (error) {
+    console.error("Error in generatehash:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 /**
- * Get the number of tokens that the Murabah router is allowed to spend
+ * Fetch the token allowance for the HTLC contract spend for the userAddress
  */
 app.get("/approve/allowance", async (req, res) => {
-  const { networkId, userAddress, tokenAddress } = req.query;
+  try {
+    const { networkId, userAddress, tokenAddress } = req.query;
 
-  let tokenContract;
-  let htlcContractAddr;
-  if (networkId == 11155111) {
-    tokenContract = new web3Sepolia.eth.Contract(erc20Abi, tokenAddress);
-    htlcContractAddr = contractSepoliaAddr;
-  } else {
-    tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
-    htlcContractAddr = contractMaticAddr;
-  }
+    let tokenContract;
+    let htlcContractAddr;
 
-  const allowance = await tokenContract.methods
-    .allowance(userAddress, htlcContractAddr)
-    .call();
-  if (allowance) {
-    return res.status(200).json({ allowance: allowance });
-  } else {
-    return res.status(400).json({ error: error.message });
+    if (networkId == 11155111) {
+      tokenContract = new web3Sepolia.eth.Contract(erc20Abi, tokenAddress);
+      htlcContractAddr = contractSepoliaAddr;
+    } else {
+      tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
+      htlcContractAddr = contractMaticAddr;
+    }
+
+    const allowance = await tokenContract.methods
+      .allowance(userAddress, htlcContractAddr)
+      .call();
+
+    return res.status(200).json({ allowance });
+  } catch (error) {
+    console.error("Error in approve/allowance:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 /**
- * Generate data for calling the token contract in order to allow the Murabah router for spend funds
+ * Generate data for calling the token contract in order to allow the HTLC to spend tokens
  */
 app.get("/approve/transaction", async (req, res) => {
-  const { networkId, tokenAddress, amount } = req.query;
+  try {
+    const { networkId, tokenAddress, amount } = req.query;
 
-  let tokenContract;
-  let htlcContractAddr;
-  if (networkId == 11155111) {
-    tokenContract = new web3Sepolia.eth.Contract(erc20Abi, tokenAddress);
-    htlcContractAddr = contractSepoliaAddr;
-  } else {
-    tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
-    htlcContractAddr = contractMaticAddr;
-  }
+    let tokenContract;
+    let htlcContractAddr;
 
-  const tx = await tokenContract.methods.approve(htlcContractAddr, amount);
-  const encodedABI = await tx.encodeABI();
+    if (networkId == 11155111) {
+      tokenContract = new web3Sepolia.eth.Contract(erc20Abi, tokenAddress);
+      htlcContractAddr = contractSepoliaAddr;
+    } else {
+      tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
+      htlcContractAddr = contractMaticAddr;
+    }
 
-  if (encodedABI) {
+    const tx = await tokenContract.methods.approve(htlcContractAddr, amount);
+    const encodedABI = await tx.encodeABI();
+
     return res.status(200).json({
       to: tokenAddress,
       data: encodedABI,
     });
-  } else {
-    return res.status(400).json({ error: "encodeABI error" });
+  } catch (error) {
+    console.error("Error in approve/transaction:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 /**
  * Creates a swap request for a user with the hashed secret
- *
  */
 app.post("/createSwapRequest", async (req, res) => {
-  console.log("createSwapRequest", req.body);
-  const { hash, amount, token, lockTime, networkId } = req.body;
+  try {
+    const { hash, amount, token, lockTime, networkId } = req.body;
 
-  let htlcContract;
-  let htlcContractAddr;
-  if (networkId == 11155111) {
-    htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
-    htlcContractAddr = contractSepoliaAddr;
-  } else {
-    htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
-    htlcContractAddr = contractMaticAddr;
-  }
+    let htlcContract;
+    let htlcContractAddr;
 
-  const tx = await htlcContract.methods.lockTokens(
-    hash,
-    networkId,
-    amount,
-    token,
-    lockTime
-  );
-  const encodedABI = await tx.encodeABI();
+    if (networkId == 11155111) {
+      htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
+      htlcContractAddr = contractSepoliaAddr;
+    } else {
+      htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+      htlcContractAddr = contractMaticAddr;
+    }
 
-  if (encodedABI) {
+    const tx = await htlcContract.methods.lockTokens(
+      hash,
+      networkId,
+      amount,
+      token,
+      lockTime
+    );
+    const encodedABI = await tx.encodeABI();
+
     return res.status(200).json({
       to: htlcContractAddr,
       data: encodedABI,
     });
-  } else {
-    return res.status(400).json({ error: "encodeABI error" });
+  } catch (error) {
+    console.error("Error in createSwapRequest:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 /**
- * Fetch all the active swap request
+ * Fetch all active swap requests
  */
 app.get("/getActiveSwapRequests", async (req, res) => {
-  const { userAddress } = req.query;
+  try {
+    const { userAddress } = req.query;
 
-  const consolidatedArray = await consolidateSwapIntoArray();
-  const activeSwaps = consolidatedArray.filter(
-    (swap) => swap.sender !== userAddress && swap.status === "pending"
-  );
-  console.log(activeSwaps);
+    const consolidatedArray = await consolidateSwapIntoArray();
+    const activeSwaps = consolidatedArray.filter(
+      (swap) => swap.sender !== userAddress && swap.status === "pending"
+    );
 
-  if (activeSwaps) {
     return res.status(200).json({ activeSwaps });
-  } else {
-    return res.status(400).json({ error: error.message });
+  } catch (error) {
+    console.error("Error in getActiveSwapRequests:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 /**
- * Fetch users swap requests
+ * Fetch user's swap requests
  */
 app.get("/getUsersSwapRequests", async (req, res) => {
-  const { userAddress } = req.query;
+  try {
+    const { userAddress } = req.query;
 
-  const consolidatedArray = await consolidateSwapIntoArray();
+    const consolidatedArray = await consolidateSwapIntoArray();
 
-  console.log("consolidatedArray ", consolidatedArray);
-  const userSwapRequests = consolidatedArray.filter(
-    (swap) => swap.sender === userAddress
-  );
+    const userSwapRequests = consolidatedArray.filter(
+      (swap) => swap.sender === userAddress
+    );
 
-  console.log("userSwapRequests ", userSwapRequests);
-
-  if (userSwapRequests) {
     return res.status(200).json({ userSwapRequests });
-  } else {
-    return res.status(400).json({ error: error.message });
+  } catch (error) {
+    console.error("Error in getUsersSwapRequests:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 /**
- * Fetch users swap engagments
+ * Fetch user's swap engagements
  */
-app.get("/getUsersSwapEngagments", async (req, res) => {
-  const { userAddress } = req.query;
+app.get("/getUsersSwapEngagements", async (req, res) => {
+  try {
+    const { userAddress } = req.query;
 
-  const consolidatedArray = await consolidateSwapIntoArray();
+    const consolidatedArray = await consolidateSwapIntoArray();
 
-  const userSwapEngagements = consolidatedArray.filter(
-    (swap) => swap.secret !== ""
-  );
+    const userSwapEngagements = consolidatedArray.filter(
+      (swap) => swap.secret !== ""
+    );
 
-  if (userSwapEngagements) {
     return res.status(200).json({ userSwapEngagements });
-  } else {
-    return res.status(400).json({ error: error.message });
+  } catch (error) {
+    console.error("Error in getUsersSwapEngagements:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 /**
- * Creates a swap request for a user with the hashed secret
- *
+ * Engage in a swap request with the hashed secret
  */
 app.post("/engageSwapRequest", async (req, res) => {
-  console.log("engageSwapRequest", req.body);
-  const {
-    hash,
-    amount,
-    sendToken,
-    recieveToken,
-    lockTime,
-    originNetworkId,
-    networkId,
-  } = req.body;
+  try {
+    const {
+      hash,
+      amount,
+      sendToken,
+      receiveToken,
+      lockTime,
+      originNetworkId,
+      networkId,
+    } = req.body;
 
-  let htlcContract;
-  let htlcContractAddr;
-  if (networkId == 11155111) {
-    htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
-    htlcContractAddr = contractSepoliaAddr;
-  } else {
-    htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
-    htlcContractAddr = contractMaticAddr;
-  }
+    let htlcContract;
+    let htlcContractAddr;
 
-  const tx = await htlcContract.methods.lockTokens(
-    hash,
-    originNetworkId,
-    amount,
-    recieveToken,
-    lockTime
-  );
-  const encodedABI = await tx.encodeABI();
+    if (networkId == 11155111) {
+      htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
+      htlcContractAddr = contractSepoliaAddr;
+    } else {
+      htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+      htlcContractAddr = contractMaticAddr;
+    }
 
-  if (encodedABI) {
+    const tx = await htlcContract.methods.lockTokens(
+      hash,
+      originNetworkId,
+      amount,
+      receiveToken,
+      lockTime
+    );
+    const encodedABI = await tx.encodeABI();
+
     return res.status(200).json({
       to: htlcContractAddr,
       data: encodedABI,
     });
-  } else {
-    return res.status(400).json({ error: "encodeABI error" });
+  } catch (error) {
+    console.error("Error in engageSwapRequest:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 /**
- *
+ * Reveal the secret for a swap engagement
  */
 app.post("/revealSecret", async (req, res) => {
-  const { secret, networkId } = req.body;
+  try {
+    const { secret, networkId } = req.body;
 
-  let htlcContract;
-  let htlcContractAddr;
-  if (networkId == 11155111) {
-    htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
-    htlcContractAddr = contractSepoliaAddr;
-  } else {
-    htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
-    htlcContractAddr = contractMaticAddr;
-  }
+    let htlcContract;
+    let htlcContractAddr;
 
-  const tx = await htlcContract.methods.revealSecret(secret);
-  const encodedABI = await tx.encodeABI();
+    if (networkId == 11155111) {
+      htlcContract = new web3Sepolia.eth.Contract(htlcAbi, contractSepoliaAddr);
+      htlcContractAddr = contractSepoliaAddr;
+    } else {
+      htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+      htlcContractAddr = contractMaticAddr;
+    }
 
-  if (encodedABI) {
+    const tx = await htlcContract.methods.revealSecret(secret);
+    const encodedABI = await tx.encodeABI();
+
     return res.status(200).json({
       to: htlcContractAddr,
       data: encodedABI,
     });
-  } else {
-    return res.status(400).json({ error: "encodeABI error" });
+  } catch (error) {
+    console.error("Error in revealSecret:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-app.listen(process.env.PORT, function () {
-  console.log("Listening on port 5050");
+app.listen(process.env.PORT, () => {
+  console.log("Server listening on port", process.env.PORT);
 });
 
 /**
- * Common logic to fetch all the swap request from contracts and consolidate into an array with status.
+ * Common logic to fetch all the swap requests from contracts and consolidate into an array with status.
  */
 const consolidateSwapIntoArray = async () => {
-  const htlcMaticContract = new web3Matic.eth.Contract(
-    htlcAbi,
-    contractMaticAddr
-  );
-  const swapMaticCount = await htlcMaticContract.methods.getSwapCount().call(); // Get the total number of swaps in Matic
+  try {
+    const htlcMaticContract = new web3Matic.eth.Contract(
+      htlcAbi,
+      contractMaticAddr
+    );
+    const swapMaticCount = await htlcMaticContract.methods.getSwapCount().call();
 
-  const htlcSepoliaContract = new web3Sepolia.eth.Contract(
-    htlcAbi,
-    contractSepoliaAddr
-  );
-  const swapSepoliaCount = await htlcSepoliaContract.methods
-    .getSwapCount()
-    .call(); // Get the total number of swaps in Sepolia
+    const htlcSepoliaContract = new web3Sepolia.eth.Contract(
+      htlcAbi,
+      contractSepoliaAddr
+    );
+    const swapSepoliaCount = await htlcSepoliaContract.methods
+      .getSwapCount()
+      .call();
 
-  
-  // Iterating through Matic Contract for swaps
-  const activeSwapMatic = await SwapIterator(
-    htlcMaticContract,
-    web3Matic,
-    swapMaticCount
-  );
-  
-  // Iterating through Sepolia Contract for swaps
-  const activeSwapSepolia = await SwapIterator(
-    htlcSepoliaContract,
-    web3Sepolia,
-    swapSepoliaCount
-  );
+    const activeSwapMatic = await SwapIterator(
+      htlcMaticContract,
+      web3Matic,
+      swapMaticCount
+    );
 
-  const consolidateArray = ConsolidateMaps(activeSwapMatic, activeSwapSepolia);
-  return consolidateArray;
+    const activeSwapSepolia = await SwapIterator(
+      htlcSepoliaContract,
+      web3Sepolia,
+      swapSepoliaCount
+    );
+
+    const consolidatedArray = ConsolidateMaps(activeSwapMatic, activeSwapSepolia);
+    return consolidatedArray;
+  } catch (error) {
+    console.error("Error in consolidateSwapIntoArray:", error);
+    throw error;
+  }
 };
