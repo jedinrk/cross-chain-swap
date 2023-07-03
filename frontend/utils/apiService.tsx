@@ -68,9 +68,13 @@ export const createSwapRequest = async (
   }
 };
 
-export const getActiveSwapRequests = async (): Promise<any> => {
+export const getActiveSwapRequests = async (
+  userAddress: string
+): Promise<any> => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/getActiveSwapRequests`);
+    const response = await axios.get(`${API_BASE_URL}/getActiveSwapRequests`, {
+      params: { userAddress },
+    });
     return response.data;
   } catch (error) {
     throw error;
