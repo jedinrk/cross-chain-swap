@@ -21,6 +21,7 @@ contract HTLCLogic is Ownable {
     }
 
     mapping(bytes32 => Swap) public swaps;
+    bytes32[] public swapHashes; // Array to store the swap hashes
 
     event SwapCompleted(
         bytes32 indexed hash,
@@ -33,6 +34,8 @@ contract HTLCLogic is Ownable {
         require(swaps[hash].hashedSecret == bytes32(0), "Swap already exists");
 
         // Perform necessary validation and token transfer logic
+
+        
         // Lock the tokens from the sender's address
         IERC20(token).transferFrom(msg.sender, address(this), amount);
 
@@ -48,6 +51,8 @@ contract HTLCLogic is Ownable {
             false, 
             false
         );
+
+         swapHashes.push(hash); // Add the swap hash to the array
     }
 
     function revealSecret(string memory secret) external {
@@ -81,6 +86,15 @@ contract HTLCLogic is Ownable {
         swap.closed = true;
 
         IERC20(swap.token).transfer(swap.sender, swap.amount);
+    }
+
+    function getSwapCount() external view returns (uint256) {
+        return swapHashes.length;
+    }
+
+    function getSwapByIndex(uint256 index) external view returns (Swap memory) {
+        require(index < swapHashes.length, "Invalid index");
+        return swaps[swapHashes[index]];
     }
 
     function getOwner() external view returns (address) {
