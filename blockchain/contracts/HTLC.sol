@@ -10,6 +10,7 @@ contract HTLCLogic is Ownable {
     struct Swap {
         address sender; // Address of the user initiating the swap
         address receiver; // Address of the user receiving the swap
+        uint256 networkId; // Network from which the swap was requested
         uint256 amount; // Amount of tokens to be swapped
         address token; // Address of the token contract
         uint256 startTime; // Timestamp when the swap request created
@@ -30,18 +31,19 @@ contract HTLCLogic is Ownable {
     );
 
 
-    function lockTokens(bytes32 hash, uint256 amount, address token, uint256 lockTime) external {
+    function lockTokens(bytes32 hash, uint256 networkId,uint256 amount, address token, uint256 lockTime) external {
         require(swaps[hash].hashedSecret == bytes32(0), "Swap already exists");
 
         // Perform necessary validation and token transfer logic
 
-        
+
         // Lock the tokens from the sender's address
         IERC20(token).transferFrom(msg.sender, address(this), amount);
 
         swaps[hash] = Swap(
             msg.sender,
-            address(0), // Set the receiver address as empty initially
+            address(0), // Set the receiver address as empty initially,
+            networkId,
             amount,
             token,
             block.timestamp,

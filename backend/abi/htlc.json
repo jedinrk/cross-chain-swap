@@ -99,6 +99,11 @@
 					},
 					{
 						"internalType": "uint256",
+						"name": "networkId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
 						"name": "amount",
 						"type": "uint256"
 					},
@@ -165,6 +170,11 @@
 				"internalType": "bytes32",
 				"name": "hash",
 				"type": "bytes32"
+			},
+			{
+				"internalType": "uint256",
+				"name": "networkId",
+				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
@@ -271,6 +281,11 @@
 				"internalType": "address",
 				"name": "receiver",
 				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "networkId",
+				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
