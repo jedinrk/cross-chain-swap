@@ -104,7 +104,7 @@ export const getUsersSwapEngagments = async (
   userAddress: string
 ): Promise<any> => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/getUsersSwapEngagments`, {
+    const response = await axios.get(`${API_BASE_URL}/getUsersSwapEngagements`, {
       params: {
         userAddress,
       },

@@ -93,7 +93,6 @@ const ConsolidateMaps = (mapA, mapB) => {
     });
   }
 
-  console.log("consolidatedArray", consolidatedArray);
   return consolidatedArray;
 };
 
