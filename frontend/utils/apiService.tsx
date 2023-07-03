@@ -12,10 +12,38 @@ interface SwapRequest {
 export const generateHash = async (secret: string): Promise<any> => {
   try {
     const response = await axios.post(`${API_BASE_URL}/generatehash`, {
-      secret
+      secret,
     });
-    console.log("generateHash: ", response)
+    console.log("generateHash: ", response);
     return response.data.hash;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const checkAllowance = async (
+  userAddress: string,
+  tokenAddress: string
+): Promise<any> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/approve/allowance`, {
+      params: { userAddress, tokenAddress },
+    });
+    return response.data.allowance;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const approveToken = async (
+  tokenAddress: string,
+  amount: Number
+): Promise<any> => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/approve/transaction`, {
+      params: { tokenAddress, amount },
+    });
+    return response.data;
   } catch (error) {
     throw error;
   }

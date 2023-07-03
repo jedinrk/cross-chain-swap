@@ -41,12 +41,12 @@ app.post("/generatehash", async (req, res) => {
  * Get the number of tokens that the Murabah router is allowed to spend
  */
 app.get("/approve/allowance", async (req, res) => {
-  const { query } = req;
+  const { userAddress, tokenAddress } = req.query;
 
-  const tokenContract = new web3.eth.Contract(erc20Abi, query.tokenAddress);
+  const tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
 
   const allowance = await tokenContract.methods
-    .allowance(query.userAddress, routerAddress)
+    .allowance(userAddress, contractMaticAddr)
     .call();
   if (allowance) {
     return res.status(200).json({ allowance: allowance });
@@ -59,16 +59,16 @@ app.get("/approve/allowance", async (req, res) => {
  * Generate data for calling the token contract in order to allow the Murabah router for spend funds
  */
 app.get("/approve/transaction", async (req, res) => {
-  const { query } = req;
+  const { tokenAddress, amount } = req.query;
 
-  const tokenContract = new web3.eth.Contract(erc20Abi, query.tokenAddress);
+  const tokenContract = new web3Matic.eth.Contract(erc20Abi, tokenAddress);
 
-  const tx = await tokenContract.methods.approve(routerAddress, maxUint256);
+  const tx = await tokenContract.methods.approve(contractMaticAddr, amount);
   const encodedABI = await tx.encodeABI();
 
   if (encodedABI) {
     return res.status(200).json({
-      to: query.tokenAddress,
+      to: tokenAddress,
       data: encodedABI,
     });
   } else {

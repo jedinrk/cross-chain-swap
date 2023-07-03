@@ -1,9 +1,14 @@
 import React, { ChangeEvent, FormEvent, useEffect, useState } from "react";
-import { createSwapRequest } from "../utils/apiService";
+import {
+  approveToken,
+  checkAllowance,
+  createSwapRequest,
+} from "../utils/apiService";
 import CloseIcon from "@mui/icons-material/Close";
 import IconButton from "@mui/material/IconButton";
 import { useDebounce } from "use-debounce";
 import {
+  useAccount,
   usePrepareSendTransaction,
   useSendTransaction,
   useWaitForTransaction,
@@ -12,39 +17,30 @@ import {
 import { parseEther } from "viem";
 
 const RequestDialog = (props: any) => {
+  const { address, isConnected } = useAccount();
+
   const { onClose } = props;
 
   const [hash, setHash] = useState("");
-  const [debouncedHash] = useDebounce(hash, 500);
-
   const [amount, setAmount] = useState(0);
   const [debouncedAmount] = useDebounce(amount, 500);
-
   const [token, setToken] = useState("");
-  const [debouncedToken] = useDebounce(token, 500);
-
   const [timeLock, setTimeLock] = useState(900); // Default 15 mins
-  const [debouncedTimeLock] = useDebounce(timeLock, 500);
 
+  const [requireApproval, setRequireApproval] = useState(false);
   const [txDetails, setTxDetails] = useState({
     to: null,
     data: null,
     value: "0",
   });
 
-  // const { config } = usePrepareSendTransaction({
-  //   to: String(txDetails.to),
-  //   data: String(txDetails.data),
-  //   value: parseEther(txDetails.value),
-  // });
-
   const { data, sendTransaction } = useSendTransaction({
     to: String(txDetails.to),
-    data: `0x${String(txDetails.data)}`,
-    value: txDetails.value? parseEther(String(txDetails.value)) : parseEther("0"),
+    data: String(txDetails.data),
+    value: txDetails.value
+      ? parseEther(String(txDetails.value))
+      : parseEther("0"),
   });
-
-  //const { data, sendTransaction } = useSendTransaction(config)
 
   const { isLoading, isSuccess } = useWaitForTransaction({
     hash: data?.hash,
@@ -54,8 +50,23 @@ const RequestDialog = (props: any) => {
     setHash(e.target.value);
   };
 
-  const handleAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setAmount(Number(e.target.value));
+  const handleAmountChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const inputAmount = Number(e.target.value);
+    setAmount(inputAmount);
+
+    if (token) {
+      const allowance = await checkAllowance(String(address), token);
+
+      if (allowance) {
+        console.log("allowance: ", allowance);
+        console.log("input amount: ", inputAmount);
+        if (inputAmount > parseEther(allowance)) {
+          setRequireApproval(true);
+        } else {
+          setRequireApproval(false);
+        }
+      }
+    }
   };
 
   const handleTokenChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -74,7 +85,6 @@ const RequestDialog = (props: any) => {
       if (txData) {
         setTxDetails(txData);
       }
-      
     } catch (error) {
       console.error("Error creating swap request:", error);
       // Handle error or show error message
@@ -85,6 +95,21 @@ const RequestDialog = (props: any) => {
     setAmount(0);
     setToken("");
     setTimeLock(0);
+  };
+
+  const handleApproveButton = async () => {
+    try {
+      const txData = await approveToken(String(token), amount);
+      console.log("Approve token:", txData);
+
+      // Handle success or update state
+      if (txData) {
+        setTxDetails(txData);
+      }
+    } catch (error) {
+      console.error("Error approving token:", error);
+      // Handle error or show error message
+    }
   };
 
   useEffect(() => {
@@ -127,7 +152,11 @@ const RequestDialog = (props: any) => {
             onChange={handleTokenChange}
           />
         </div>
-        <button type="submit">Submit</button>
+        {requireApproval ? (
+          <button type="button" onClick={handleApproveButton}>Approve</button>
+        ) : (
+          <button type="submit">Submit</button>
+        )}
       </form>
     </div>
   );
