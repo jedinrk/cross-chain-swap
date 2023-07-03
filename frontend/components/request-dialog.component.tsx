@@ -22,7 +22,7 @@ const RequestDialog = (props: any) => {
   const { onClose } = props;
 
   const [hash, setHash] = useState("");
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState("0");
   const [debouncedAmount] = useDebounce(amount, 500);
   const [token, setToken] = useState("");
   const [timeLock, setTimeLock] = useState(900); // Default 15 mins
@@ -51,22 +51,26 @@ const RequestDialog = (props: any) => {
   };
 
   const handleAmountChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const inputAmount = Number(e.target.value);
-    setAmount(inputAmount);
+    const inputAmount = Number(parseEther(e.target.value));
+    setAmount(e.target.value);
 
     if (token) {
       const allowance = await checkAllowance(String(address), token);
 
       if (allowance) {
-        console.log("allowance: ", allowance);
+        console.log("allowance: ", Number(allowance));
         console.log("input amount: ", inputAmount);
-        if (inputAmount > parseEther(allowance)) {
+        if (inputAmount > Number(allowance)) {
           setRequireApproval(true);
         } else {
           setRequireApproval(false);
         }
       }
     }
+  };
+
+  const handleTimeLockChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setTimeLock(Number(e.target.value));
   };
 
   const handleTokenChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +82,7 @@ const RequestDialog = (props: any) => {
 
     // Perform API request here using hash, amount, and token
     try {
-      const txData = await createSwapRequest(hash, amount, token, timeLock);
+      const txData = await createSwapRequest(hash, String(parseEther(amount)), token, timeLock);
       console.log("Swap request created:", txData);
 
       // Handle success or update state
@@ -126,6 +130,15 @@ const RequestDialog = (props: any) => {
       <h2>Submit Request</h2>
       <form onSubmit={handleSubmit}>
         <div>
+          <label htmlFor="token">Token:</label>
+          <input
+            type="text"
+            id="token"
+            value={token}
+            onChange={handleTokenChange}
+          />
+        </div>
+        <div>
           <label htmlFor="hash">Hash:</label>
           <input
             type="text"
@@ -144,16 +157,18 @@ const RequestDialog = (props: any) => {
           />
         </div>
         <div>
-          <label htmlFor="token">Token:</label>
+          <label htmlFor="token">Lock time:</label>
           <input
             type="text"
-            id="token"
-            value={token}
-            onChange={handleTokenChange}
+            id="timeLock"
+            value={timeLock}
+            onChange={handleTimeLockChange}
           />
         </div>
         {requireApproval ? (
-          <button type="button" onClick={handleApproveButton}>Approve</button>
+          <button type="button" onClick={handleApproveButton}>
+            Approve
+          </button>
         ) : (
           <button type="submit">Submit</button>
         )}

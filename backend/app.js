@@ -124,7 +124,7 @@ app.get("/getActiveSwapRequests", async (req, res) => {
     const swapRequest = SwapRequest(
       result[3],
       tokenSymbol,
-      result[2],
+      Web3.utils.fromWei(result[2], 'ether'),
       "Matic -> BSC",
       result[5],
       result[6],

@@ -51,7 +51,7 @@ export const approveToken = async (
 
 export const createSwapRequest = async (
   hash: string,
-  amount: number,
+  amount: string,
   token: string,
   lockTime: number
 ): Promise<any> => {
