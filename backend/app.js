@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { SwapRequest } = require("./utils");
+const { SwapIterator, ConsolidateMaps } = require("./utils");
 
 /** Express JS and CORS configrations */
 var express = require("express");
@@ -137,31 +137,35 @@ app.post("/createSwapRequest", async (req, res) => {
 app.get("/getActiveSwapRequests", async (req, res) => {
   const { userAddress } = req.query;
 
-  const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
+  const htlcMaticContract = new web3Matic.eth.Contract(
+    htlcAbi,
+    contractMaticAddr
+  );
+  const swapMaticCount = await htlcMaticContract.methods.getSwapCount().call(); // Get the total number of swaps in Matic
 
-  const swapCount = await htlcContract.methods.getSwapCount().call(); // Get the total number of swaps
+  const htlcSepoliaContract = new web3Sepolia.eth.Contract(
+    htlcAbi,
+    contractSepoliaAddr
+  );
+  const swapSepoliaCount = await htlcSepoliaContract.methods
+    .getSwapCount()
+    .call(); // Get the total number of swaps in Sepolia
 
-  const activeSwaps = [];
+  // Iterating through Matic Contract for swaps
+  const activeSwapMatic = await SwapIterator(
+    htlcMaticContract,
+    web3Matic,
+    swapMaticCount
+  );
 
-  for (let i = 0; i < swapCount; i++) {
-    const swapByIndex = await htlcContract.methods.getSwapByIndex(i).call(); // Get the swap hash at index i
-    const result = await htlcContract.methods.swaps(swapByIndex[6]).call(); // Get the swap details using the hash
-    const tokenContract = new web3Matic.eth.Contract(erc20Abi, result[3]);
-    const tokenSymbol = await tokenContract.methods.symbol().call();
+  // Iterating through Sepolia Contract for swaps
+  const activeSwapSepolia = await SwapIterator(
+    htlcSepoliaContract,
+    web3Sepolia,
+    swapSepoliaCount
+  );
 
-    const swapRequest = SwapRequest(
-      result[3],
-      tokenSymbol,
-      Web3.utils.fromWei(result[2], "ether"),
-      "Matic -> BSC",
-      result[5],
-      result[6],
-      result[8],
-      result[9]
-    );
-
-    activeSwaps.push(swapRequest);
-  }
+  const activeSwaps = ConsolidateMaps(activeSwapMatic, activeSwapSepolia);
 
   if (activeSwaps) {
     return res.status(200).json({ activeSwaps });
@@ -184,7 +188,8 @@ app.get("/getUsersSwapRequests", async (req, res) => {
  */
 app.post("/engageSwapRequest", async (req, res) => {
   console.log("engageSwapRequest", req.body);
-  const { hash, amount, sendToken, recieveToken, lockTime, networkId } = req.body;
+  const { hash, amount, sendToken, recieveToken, lockTime, networkId } =
+    req.body;
 
   let htlcContract;
   let htlcContractAddr;

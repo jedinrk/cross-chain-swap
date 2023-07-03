@@ -1,7 +1,77 @@
+const Web3 = require("web3");
+const erc20Abi = require("./abi/erc20.json");
+
+
 const SwapRequest = (tokenAddress, tokenSymbol, amount, network, timeLock, hash, isCompleted, isClosed) => {
   return { tokenAddress, tokenSymbol, amount, network, timeLock, hash, isCompleted,  isClosed};
 };
 
+
+const SwapIterator = async (htlcContract, web3, swapCount ) => {
+  const activeSwapMap = new Map();
+  for (let i = 0; i < swapCount; i++) {
+    const swapByIndex = await htlcContract.methods.getSwapByIndex(i).call(); // Get the swap hash at index i
+    const result = await htlcContract.methods.swaps(swapByIndex[6]).call(); // Get the swap details using the hash
+    const tokenContract = new web3.eth.Contract(erc20Abi, result[3]);
+    const tokenSymbol = await tokenContract.methods.symbol().call();
+
+    const swapRequest = SwapRequest(
+      result[3],
+      tokenSymbol,
+      Web3.utils.fromWei(result[2], "ether"),
+      "Matic -> BSC",
+      result[5],
+      result[6],
+      result[8],
+      result[9]
+    );
+
+    activeSwapMap.set(result[6],swapRequest);
+  }
+
+  return activeSwapMap;
+}
+
+const ConsolidateMaps = (mapA, mapB) => {
+  const consolidatedArray = [];
+
+  // Iterate over entries in mapA
+  for (const [key, valueA] of mapA) {
+    const valueB = mapB.get(key);
+
+    if (valueB) {
+      // Both maps have the same key, add object with 'ready' status
+      consolidatedArray.push({
+        ...valueA,
+        status: 'ready'
+      });
+
+      // Remove the entry from mapB to handle remaining entries in mapB later
+      mapB.delete(key);
+    } else {
+      // Only mapA has the key, add object with 'pending' status
+      consolidatedArray.push({
+        ...valueA,
+        status: 'pending'
+      });
+    }
+  }
+
+  // Iterate over remaining entries in mapB
+  for (const [key, valueB] of mapB) {
+    // Only mapB has the key, add object with 'pending' status
+    consolidatedArray.push({
+      ...valueB,
+      status: 'pending'
+    });
+  }
+
+  return consolidatedArray;
+};
+
+
 module.exports = {
-  SwapRequest
+  SwapRequest,
+  SwapIterator,
+  ConsolidateMaps,
 };
