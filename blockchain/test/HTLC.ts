@@ -92,7 +92,7 @@ describe("HTLC", function () {
 
     const senderBalance = await token.balanceOf(sender.address);
     expect(senderBalance).to.equal(senderInitialBalance-amount);
-    
+
     await htlcLogic.refund(hash);
 
     const swap = await htlcLogic.swaps(hash);
@@ -103,4 +103,38 @@ describe("HTLC", function () {
     const senderFinalBalance = await token.balanceOf(sender.address);
     expect(senderFinalBalance).to.equal(senderInitialBalance);
   });
+
+  it("should return the number of swaps", async function () {
+    const hash = "0x2fb550954fa5b52bfc734f9019b33c72d192a14faaeb49be17b4e7e97be9e593";
+    await token.approve(htlcLogic.target, ethers.parseEther("1"));
+    await htlcLogic.lockTokens(hash, 1, ethers.parseEther("1"), token.target, 0);
+
+    const swapCount = await htlcLogic.getSwapCount();
+
+    expect(swapCount).to.equal(1);
+  });
+
+  it("should return the swap details by index", async function () {
+    const hash = "0x2fb550954fa5b52bfc734f9019b33c72d192a14faaeb49be17b4e7e97be9e595";
+    const networkId = 1;
+    const amount = ethers.parseEther("1");
+    const lockTime = 3600; // 1 hour
+
+    await token.approve(htlcLogic.target, amount);
+    await htlcLogic.lockTokens(hash, networkId, amount, token.target, lockTime);
+
+    const swap = await htlcLogic.getSwapByIndex(0);
+
+    expect(swap.sender).to.equal(sender.address);
+    expect(swap.receiver).to.equal(zeroAddr);
+    expect(swap.networkId).to.equal(networkId);
+    expect(swap.amount).to.equal(amount);
+    expect(swap.token).to.equal(token.target);
+    expect(swap.lockTime).to.equal(lockTime);
+    expect(swap.hashedSecret).to.equal(hash);
+    expect(swap.secret).to.equal("");
+    expect(swap.completed).to.equal(false);
+    expect(swap.closed).to.equal(false);
+  });
+
 });
