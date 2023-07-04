@@ -25,7 +25,7 @@ describe("HTLC", function () {
   });
 
   it("should lock tokens and create a new swap", async function () {
-    const hash = "0x51dd1d399a6f7bbb877add23d470aeef62462e051d1f643a1354ef67bdc99dbb";
+    const hash = "0x4faee670273f04bc8c3ce0cee41c1005b906f1703f4341311df55eed98438787";
     const networkId = 1;
     const amount = ethers.parseEther("1");
     const lockTime = 3600; // 1 hour
@@ -79,5 +79,28 @@ describe("HTLC", function () {
     // Verify token transfer
     const receiverBalance = await token.balanceOf(receiver.address);
     expect(receiverBalance).to.equal(ethers.parseEther("1"));
+  });
+
+  it("should refund tokens to the sender", async function () {
+    const hash = "0x263d8264c5a2cb5add3e044b77fdb2a3f0b9e464bd36df27c23a924fc6110d42";
+    const amount = ethers.parseEther("1");
+
+    const senderInitialBalance = await token.balanceOf(sender.address);
+
+    await token.approve(htlcLogic.target, amount);
+    await htlcLogic.lockTokens(hash, 1, amount, token.target, 0);
+
+    const senderBalance = await token.balanceOf(sender.address);
+    expect(senderBalance).to.equal(senderInitialBalance-amount);
+    
+    await htlcLogic.refund(hash);
+
+    const swap = await htlcLogic.swaps(hash);
+
+    expect(swap.closed).to.equal(true);
+
+    // Verify token transfer
+    const senderFinalBalance = await token.balanceOf(sender.address);
+    expect(senderFinalBalance).to.equal(senderInitialBalance);
   });
 });
