@@ -6,95 +6,57 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
+const zeroAddr = "0x0000000000000000000000000000000000000000";
 describe("HTLC", function () {
-  // We define a fixture to reuse the same setup in every test.
-  // We use loadFixture to run this setup once, snapshot that state,
-  // and reset Hardhat Network to that snapshot in every test.
-  async function deployContract() {
-    
-    // Contracts are deployed using the first signer/account by default
-    const [owner, user1, user2] = await ethers.getSigners();
+  let htlcLogic : any;
+  let token : any;
+  let sender : any;
+  let receiver : any;
 
-    const HTLC = await ethers.getContractFactory("HTLCLogic");
-    const htlc = await HTLC.deploy();
+  beforeEach(async function () {
 
-    return { htlc, owner, user1, user2 };
-  }
+    const HTLCLogic = await ethers.getContractFactory("HTLCLogic");
+    htlcLogic = await HTLCLogic.deploy();
 
-  describe("Deployment", function () {
-    
-    it("Should set the right owner", async function () {
-      const { htlc, owner } = await loadFixture(deployContract);
+    const USDK = await ethers.getContractFactory("USDK");
+    token = await USDK.deploy();
 
-      expect(await htlc.owner()).to.equal(owner.address);
-    });
-
-    
+    [sender, receiver] = await ethers.getSigners();
   });
 
-//   describe("Withdrawals", function () {
-//     describe("Validations", function () {
-//       it("Should revert with the right error if called too soon", async function () {
-//         const { lock } = await loadFixture(deployOneYearLockFixture);
+  it("should lock tokens and create a new swap", async function () {
+    const hash = "0x51dd1d399a6f7bbb877add23d470aeef62462e051d1f643a1354ef67bdc99dbb";
+    const networkId = 1;
+    const amount = ethers.parseEther("1");
+    const lockTime = 3600; // 1 hour
 
-//         await expect(lock.withdraw()).to.be.revertedWith(
-//           "You can't withdraw yet"
-//         );
-//       });
+    await token.approve(htlcLogic.target, amount);
+    const lockTokensTx = await htlcLogic.lockTokens(
+      hash,
+      networkId,
+      amount,
+      token.target,
+      lockTime
+    );
 
-//       it("Should revert with the right error if called from another account", async function () {
-//         const { lock, unlockTime, otherAccount } = await loadFixture(
-//           deployOneYearLockFixture
-//         );
+    const swap = await htlcLogic.swaps(hash);
+    const swapHashes = await htlcLogic.swapHashes(0);
 
-//         // We can increase the time in Hardhat Network
-//         await time.increaseTo(unlockTime);
+    expect(swap.sender).to.equal(sender.address);
+    expect(swap.receiver).to.equal(zeroAddr);
+    expect(swap.networkId).to.equal(networkId);
+    expect(swap.amount).to.equal(amount);
+    expect(swap.token).to.equal(token.target);
+    expect(swap.lockTime).to.equal(lockTime);
+    expect(swap.hashedSecret).to.equal(hash);
+    expect(swap.secret).to.equal("");
+    expect(swap.completed).to.equal(false);
+    expect(swap.closed).to.equal(false);
 
-//         // We use lock.connect() to send a transaction from another account
-//         await expect(lock.connect(otherAccount).withdraw()).to.be.revertedWith(
-//           "You aren't the owner"
-//         );
-//       });
+    expect(swapHashes).to.equal(hash);
 
-//       it("Shouldn't fail if the unlockTime has arrived and the owner calls it", async function () {
-//         const { lock, unlockTime } = await loadFixture(
-//           deployOneYearLockFixture
-//         );
-
-//         // Transactions are sent using the first signer by default
-//         await time.increaseTo(unlockTime);
-
-//         await expect(lock.withdraw()).not.to.be.reverted;
-//       });
-//     });
-
-//     describe("Events", function () {
-//       it("Should emit an event on withdrawals", async function () {
-//         const { lock, unlockTime, lockedAmount } = await loadFixture(
-//           deployOneYearLockFixture
-//         );
-
-//         await time.increaseTo(unlockTime);
-
-//         await expect(lock.withdraw())
-//           .to.emit(lock, "Withdrawal")
-//           .withArgs(lockedAmount, anyValue); // We accept any value as `when` arg
-//       });
-//     });
-
-//     describe("Transfers", function () {
-//       it("Should transfer the funds to the owner", async function () {
-//         const { lock, unlockTime, lockedAmount, owner } = await loadFixture(
-//           deployOneYearLockFixture
-//         );
-
-//         await time.increaseTo(unlockTime);
-
-//         await expect(lock.withdraw()).to.changeEtherBalances(
-//           [owner, lock],
-//           [lockedAmount, -lockedAmount]
-//         );
-//       });
-//     });
-//   });
+    expect(lockTokensTx)
+      .to.emit(htlcLogic, "SwapCompleted")
+      .withArgs(hash, sender.address, 0x00);
+  });
 });
