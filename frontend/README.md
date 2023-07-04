@@ -1,29 +1,57 @@
-This is a [RainbowKit](https://rainbowkit.com) + [wagmi](https://wagmi.sh) + [Next.js](https://nextjs.org/) project bootstrapped with [`create-rainbowkit`](https://github.com/rainbow-me/rainbowkit/tree/main/packages/create-rainbowkit).
+# Frontend Repo for Cross-Chain Token Swap using HTLC Smart Contract
+
+This repository contains the frontend code for a cross-chain token swap application that utilizes the Hash Time-Locked Contract (HTLC) smart contract. The application supports token swaps between the Mumbai Matic and Sepolia networks.
+
+## Stack
+
+The project is built using the following technologies:
+
+- [RainbowKit](https://rainbowkit.com): RainbowKit is a toolkit for integrating wallets into decentralized applications. It provides a customizable wallet connection flow.
+
+- [wagmi](https://wagmi.sh): wagmi is a library that allows interaction with the Ethereum blockchain. It provides functions and utilities for sending transactions, interacting with smart contracts, and more.
+
+- [Next.js](https://nextjs.org/): Next.js is a React framework for building server-side rendered and static websites. It provides an intuitive development experience and powerful features for building modern web applications.
+
+The project was bootstrapped with [`create-rainbowkit`](https://github.com/rainbow-me/rainbowkit/tree/main/packages/create-rainbowkit), which sets up the initial project structure and configuration.
 
 ## Getting Started
 
-First, run the development server:
+To get started with the development server, follow these steps:
 
-```bash
-npm run dev
-```
+1. Clone the repository:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```bash
+   git clone <repository-url>
+   ```
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+2. Navigate to the project directory:
 
-## Learn More
+   ```bash
+   cd <project-directory>
+   ```
 
-To learn more about this stack, take a look at the following resources:
+3. Install the dependencies:
 
-- [RainbowKit Documentation](https://rainbowkit.com) - Learn how to customize your wallet connection flow.
-- [wagmi Documentation](https://wagmi.sh) - Learn how to interact with Ethereum.
-- [Next.js Documentation](https://nextjs.org/docs) - Learn how to build a Next.js application.
+   ```bash
+   yarn
+   ```
 
-You can check out [the RainbowKit GitHub repository](https://github.com/rainbow-me/rainbowkit) - your feedback and contributions are welcome!
+4. Run the development server:
 
-## Deploy on Vercel
+   ```bash
+   yarn dev
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## Reference
+
+To learn more about the technologies used in this project, refer to the following resources:
+
+- [RainbowKit Documentation](https://rainbowkit.com): Learn how to customize your wallet connection flow using RainbowKit.
+
+- [wagmi Documentation](https://wagmi.sh): Explore the documentation for wagmi to understand how to interact with Ethereum and use its features.
+
+- [Next.js Documentation](https://nextjs.org/docs): Check out the official Next.js documentation to learn more about building Next.js applications and utilizing its features.
+
+You can also check out [the RainbowKit GitHub repository](https://github.com/rainbow-me/rainbowkit) for additional information and contribute to the project.
