@@ -1,13 +1,8 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
-
-  const lockedAmount = ethers.parseEther("0.001");
-
-  const htlc = await ethers.deployContract("HTLC");
-
+  
+  const htlc = await ethers.deployContract("HTLCLogic");
   await htlc.waitForDeployment();
 
   console.log(
