@@ -1,25 +1,20 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const Web3 = require("web3");
-const htlcAbi = require("./abi/htlc.json");
-const erc20Abi = require("./abi/erc20.json");
 const { SwapIterator, ConsolidateMaps } = require("./utils");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize Web3 instances
-const web3Sepolia = new Web3(
-  new Web3.providers.HttpProvider(process.env.SEPOLIA_RPC)
-);
-const web3Matic = new Web3(
-  new Web3.providers.HttpProvider(process.env.POLYGON_RPC)
-);
-
-const contractMaticAddr = process.env.HTLC_MATIC_CONTRACT_ADDRESS;
-const contractSepoliaAddr = process.env.HTLC_SEPOLIA_CONTRACT_ADDRESS;
+const {
+  htlcAbi,
+  erc20Abi,
+  web3Sepolia,
+  web3Matic,
+  contractMaticAddr,
+  contractSepoliaAddr,
+} = require("./web3");
 
 /**
  * Generates the hash for the provided secret key
@@ -28,7 +23,9 @@ app.post("/generatehash", async (req, res) => {
   try {
     const { secret } = req.body;
     const htlcContract = new web3Matic.eth.Contract(htlcAbi, contractMaticAddr);
-    const generatedHash = await htlcContract.methods.generateHash(secret).call();
+    const generatedHash = await htlcContract.methods
+      .generateHash(secret)
+      .call();
 
     return res.status(200).json({ hash: generatedHash });
   } catch (error) {
@@ -282,7 +279,9 @@ const consolidateSwapIntoArray = async () => {
       htlcAbi,
       contractMaticAddr
     );
-    const swapMaticCount = await htlcMaticContract.methods.getSwapCount().call();
+    const swapMaticCount = await htlcMaticContract.methods
+      .getSwapCount()
+      .call();
 
     const htlcSepoliaContract = new web3Sepolia.eth.Contract(
       htlcAbi,
@@ -304,7 +303,10 @@ const consolidateSwapIntoArray = async () => {
       swapSepoliaCount
     );
 
-    const consolidatedArray = ConsolidateMaps(activeSwapMatic, activeSwapSepolia);
+    const consolidatedArray = ConsolidateMaps(
+      activeSwapMatic,
+      activeSwapSepolia
+    );
     return consolidatedArray;
   } catch (error) {
     console.error("Error in consolidateSwapIntoArray:", error);
