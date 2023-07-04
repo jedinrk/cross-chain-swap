@@ -59,4 +59,25 @@ describe("HTLC", function () {
       .to.emit(htlcLogic, "SwapCompleted")
       .withArgs(hash, sender.address, 0x00);
   });
+
+  it("should reveal the secret and complete the swap", async function () {
+    const hash = "0x51dd1d399a6f7bbb877add23d470aeef62462e051d1f643a1354ef67bdc99dbb";
+    const secret = "theNewSecret";
+
+    await token.approve(htlcLogic.target, ethers.parseEther("1"));
+    await htlcLogic.lockTokens(hash, 1, ethers.parseEther("1"), token.target, 3600);
+
+    await htlcLogic.connect(receiver).revealSecret(secret);
+
+    const swap = await htlcLogic.swaps(hash);
+
+    expect(swap.secret).to.equal(secret);
+    expect(swap.receiver).to.equal(receiver.address);
+    expect(swap.completed).to.equal(true);
+    expect(swap.closed).to.equal(true);
+
+    // Verify token transfer
+    const receiverBalance = await token.balanceOf(receiver.address);
+    expect(receiverBalance).to.equal(ethers.parseEther("1"));
+  });
 });
